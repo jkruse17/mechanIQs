@@ -221,15 +221,17 @@ async function getKeyValueStoreOutput(storeId) {
 export async function searchPartsByVehicle(vehicle, partCategory = null) {
   const { year, make, model } = vehicle
 
-  // Use the partsearch endpoint which seems to work better with this actor
-  // Search for common parts like brake pads to get some results
-  const searchUrl = `https://www.rockauto.com/en/partsearch/?partnum=brake`
+  // Build a vehicle-specific RockAuto catalog URL from the user's input
+  // e.g. "2014 Toyota Camry" → https://www.rockauto.com/en/catalog/toyota,2014,camry
+  const makeSlug = make.toLowerCase()
+  const modelSlug = model.toLowerCase().replace(/\s+/g, '+')
+  const searchUrl = `https://www.rockauto.com/en/catalog/${makeSlug},${year},${modelSlug}`
 
-  console.log(`🔍 Using search URL: ${searchUrl}`)
+  console.log(`🔍 Searching RockAuto for ${year} ${make} ${model}: ${searchUrl}`)
 
   const input = {
     startUrls: [{ url: searchUrl }],
-    maxRequestsPerCrawl: 20, // Reduced to get faster results
+    maxRequestsPerCrawl: 20,
     maxPagesPerCrawl: 20,
     proxyConfiguration: {
       useApifyProxy: true,
