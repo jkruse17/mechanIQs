@@ -81,9 +81,46 @@ const MAINTENANCE = [
 const DIFF_LABEL = ["", "Easy", "Moderate", "Hard"]
 const DIFF_COLOR = ["", "#4a9", "#e8a020", "#e04444"]
 const DEFAULT_VEHICLE = { year: "", make: "", model: "", trim: "", odometer: "", vin: "" }
+const GARAGE_STORAGE_KEY = "mechaniqs.garage.v1"
+const LAST_VEHICLE_STORAGE_KEY = "mechaniqs.lastVehicle.v1"
+
+const normalizeVehicle = (v = {}) => ({
+    year: String(v.year || "").trim(),
+    make: String(v.make || "").trim(),
+    model: String(v.model || "").trim(),
+    trim: String(v.trim || "").trim(),
+    odometer: String(v.odometer || "").trim(),
+    vin: String(v.vin || "").trim().toUpperCase(),
+})
+
+const getVehicleKey = (v = {}) => {
+    const n = normalizeVehicle(v)
+    if (n.vin && n.vin.length === 17) return `VIN:${n.vin}`
+    return `YMMT:${n.year}|${n.make}|${n.model}|${n.trim}`.toUpperCase()
+}
+
+const readStorage = (key, fallback) => {
+    try {
+        const raw = localStorage.getItem(key)
+        return raw ? JSON.parse(raw) : fallback
+    } catch (err) {
+        console.error(`Storage read failed for ${key}`, err)
+        return fallback
+    }
+}
+
+const writeStorage = (key, value) => {
+    try {
+        localStorage.setItem(key, JSON.stringify(value))
+        return true
+    } catch (err) {
+        console.error(`Storage write failed for ${key}`, err)
+        return false
+    }
+}
 
 export default function MechanIqs() {
-    const [screen, setScreen] = useState("selector")
+    const [screen, setScreen] = useState("hub")
     const [vehicle, setVehicle] = useState(DEFAULT_VEHICLE)
     const [selectedPart, setSelectedPart] = useState(null)
     const [step, setStep] = useState(0)
@@ -97,10 +134,34 @@ export default function MechanIqs() {
     const [fetchingVehicles, setFetchingVehicles] = useState(false)
     const [vehicleError, setVehicleError] = useState("")
     const [useVin, setUseVin] = useState(false)
+    const [garage, setGarage] = useState([])
     const chatEl = useRef(null)
 
+    const addVehicleToGarage = (v) => {
+        const normalized = normalizeVehicle(v)
+        if (!normalized.year || !normalized.make || !normalized.model) return
+        const key = getVehicleKey(normalized)
+        setGarage(prev => {
+            const next = [...prev]
+            const idx = next.findIndex(item => item.key === key)
+            const entry = { ...normalized, key, updatedAt: new Date().toISOString() }
+            if (idx >= 0) next[idx] = { ...next[idx], ...entry }
+            else next.unshift(entry)
+            writeStorage(GARAGE_STORAGE_KEY, next)
+            return next
+        })
+    }
+
+    const loadVehicle = (v, nextScreen = "hub") => {
+        const normalized = normalizeVehicle(v)
+        setVehicle(normalized)
+        writeStorage(LAST_VEHICLE_STORAGE_KEY, normalized)
+        addVehicleToGarage(normalized)
+        setScreen(nextScreen)
+    }
+
     const goHome = () => {
-        setScreen("selector")
+        setScreen("hub")
         setVehicle(DEFAULT_VEHICLE)
         setSelectedPart(null)
         setStep(0)
@@ -112,6 +173,31 @@ export default function MechanIqs() {
         setVehicleError("")
         setUseVin(false)
     }
+
+    useEffect(() => {
+        const parsedGarage = readStorage(GARAGE_STORAGE_KEY, [])
+        if (Array.isArray(parsedGarage)) {
+            setGarage(parsedGarage)
+        } else if (parsedGarage && typeof parsedGarage === "object") {
+            setGarage(Object.values(parsedGarage))
+        }
+
+        const parsedLastVehicle = readStorage(LAST_VEHICLE_STORAGE_KEY, null)
+        if (parsedLastVehicle) {
+            const normalized = normalizeVehicle(parsedLastVehicle)
+            if (normalized.year && normalized.make && normalized.model) setVehicle(normalized)
+        }
+    }, [])
+
+    useEffect(() => {
+        writeStorage(GARAGE_STORAGE_KEY, garage)
+    }, [garage])
+
+    useEffect(() => {
+        if (vehicle.year && vehicle.make && vehicle.model) {
+            writeStorage(LAST_VEHICLE_STORAGE_KEY, normalizeVehicle(vehicle))
+        }
+    }, [vehicle])
 
     useEffect(() => {
         if (chatEl.current) chatEl.current.scrollTop = chatEl.current.scrollHeight
@@ -184,7 +270,7 @@ export default function MechanIqs() {
             const model = results.find(r => r.Variable === "Model")?.Value
             const trim = results.find(r => r.Variable === "Trim")?.Value || ""
             if (year && make && model) {
-                setVehicle(x => ({ ...x, year, make, model, trim }))
+                loadVehicle({ ...vehicle, year, make, model, trim }, "hub")
                 setUseVin(false) // switch to manual to show fields
             } else {
                 setVehicleError("Could not decode VIN")
@@ -280,7 +366,7 @@ export default function MechanIqs() {
 
                     {/* Quick demo tile */}
                     <div
-                        onClick={() => { setVehicle({ year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000" }); setScreen("maintenance") }}
+                        onClick={() => loadVehicle({ year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000" }, "hub")}
                         style={{ border: "1px solid #e8890c", borderRadius: "4px", padding: "14px 18px", marginBottom: "28px", cursor: "pointer", background: "#0f0a00" }}
                     >
                         <div style={{ fontSize: "10px", color: "#e8890c", letterSpacing: "0.14em", marginBottom: "6px" }}>⚡  QUICK START — DEMO VEHICLE</div>
@@ -360,10 +446,10 @@ export default function MechanIqs() {
 
                     <button
                         disabled={useVin ? !vehicle.vin : !ready}
-                        onClick={useVin ? decodeVIN : () => setScreen("maintenance")}
+                        onClick={useVin ? decodeVIN : () => loadVehicle(vehicle, "hub")}
                         style={{ ...G.btn(useVin ? vehicle.vin : ready ? "#e8890c" : "#1e1e1e"), color: useVin ? (vehicle.vin ? "#0b0b0b" : "#444") : (ready ? "#0b0b0b" : "#444"), cursor: useVin ? (vehicle.vin ? "pointer" : "not-allowed") : (ready ? "pointer" : "not-allowed"), width: "100%", padding: "13px" }}
                     >
-                        {useVin ? "DECODE VIN →" : "GET MAINTENANCE →"}
+                        {useVin ? "DECODE VIN →" : "GO TO DASHBOARD →"}
                     </button>
                 </div>
             </div>
@@ -372,32 +458,34 @@ export default function MechanIqs() {
 
     // ─── HUB ───────────────────────────────────────────────────────
     if (screen === "hub") {
+        const hasVehicle = Boolean(vehicle.year && vehicle.make && vehicle.model)
         const tiles = [
-            { icon: "⬡", label: "Parts Catalog", sub: "OEM vs aftermarket with fitment", action: () => setScreen("parts"), live: true },
+            { icon: "＋", label: "Add Vehicle", sub: "Load by VIN or manual selection", action: () => setScreen("selector"), live: true },
+            { icon: "▣", label: "Garage", sub: `${garage.length} saved vehicle${garage.length === 1 ? "" : "s"}`, action: () => setScreen("garage"), live: true },
+            { icon: "⬡", label: "Parts Catalog", sub: "OEM vs aftermarket with fitment", action: () => setScreen("parts"), live: hasVehicle },
             { icon: "◈", label: "AI Symptom Diagnosis", sub: "Describe it — get ranked causes", action: null, live: false },
-            { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: () => setScreen("maintenance"), live: true },
+            { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: () => setScreen("maintenance"), live: hasVehicle },
             { icon: "⚑", label: "OBD-II Code Lookup", sub: "Paste a fault code for plain English", action: null, live: false },
         ]
         return (
             <div style={G.app}>
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <button onClick={() => setScreen("selector")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Back</button>
-                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
-                            <span style={G.logo}>MECHANIQS</span>
-                        </button>
-                    </div>
-                    <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
                     <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
                         <span style={G.logo}>MECHANIQS</span>
                     </button>
-                    <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
+                    {hasVehicle ? (
+                        <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
+                    ) : (
+                        <span style={{ fontSize: "11px", color: "#555", letterSpacing: "0.08em" }}>NO VEHICLE LOADED</span>
+                    )}
                 </div>
                 <div style={{ maxWidth: "640px", margin: "0 auto", padding: "36px 20px" }}>
                     <div style={{ marginBottom: "32px" }}>
-                        <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>VEHICLE LOADED</div>
-                        <h2 style={{ fontSize: "26px", fontWeight: "700" }}>{vehicle.year} {vehicle.make} {vehicle.model}</h2>
+                        <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>{hasVehicle ? "VEHICLE LOADED" : "DASHBOARD"}</div>
+                        <h2 style={{ fontSize: "26px", fontWeight: "700" }}>
+                            {hasVehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}` : "Load a vehicle to unlock maintenance and parts"}
+                        </h2>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                         {tiles.map(t => (
@@ -415,6 +503,54 @@ export default function MechanIqs() {
                             </div>
                         ))}
                     </div>
+                </div>
+            </div>
+        )
+    }
+
+    // ─── GARAGE ──────────────────────────────────────────────────────
+    if (screen === "garage") {
+        return (
+            <div style={G.app}>
+                <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
+                <div style={G.topbar}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <button onClick={() => setScreen("hub")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Dashboard</button>
+                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                            <span style={G.logo}>MECHANIQS</span>
+                        </button>
+                    </div>
+                    <button onClick={() => setScreen("selector")} style={G.ghost}>ADD VEHICLE</button>
+                </div>
+
+                <div style={{ maxWidth: "760px", margin: "0 auto", padding: "36px 20px" }}>
+                    <div style={{ marginBottom: "20px" }}>
+                        <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>GARAGE</div>
+                        <h2 style={{ fontSize: "26px", fontWeight: "700", marginBottom: "8px" }}>Saved Vehicles</h2>
+                        <p style={{ color: "#666", fontSize: "13px", lineHeight: "1.6" }}>Vehicles loaded through VIN, manual selection, or demo are saved locally on this device.</p>
+                    </div>
+
+                    {garage.length === 0 ? (
+                        <div style={{ border: "1px solid #1e1e1e", borderRadius: "4px", background: "#0e0e0e", padding: "22px" }}>
+                            <div style={{ fontSize: "14px", marginBottom: "8px" }}>No saved vehicles yet.</div>
+                            <button onClick={() => setScreen("selector")} style={G.btn()}>ADD YOUR FIRST VEHICLE →</button>
+                        </div>
+                    ) : (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                            {garage.map(item => (
+                                <div key={item.key} style={{ border: "1px solid #2a2a2a", borderRadius: "4px", padding: "16px", background: "#0e0e0e" }}>
+                                    <div style={{ fontSize: "17px", fontWeight: "700", marginBottom: "5px" }}>{item.year} {item.make} {item.model}{item.trim ? ` ${item.trim}` : ""}</div>
+                                    <div style={{ color: "#666", fontSize: "12px", marginBottom: "10px" }}>
+                                        {item.odometer ? `${item.odometer} miles` : "Odometer not set"}
+                                        {item.vin ? ` • VIN ${item.vin}` : ""}
+                                    </div>
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        <button onClick={() => { setVehicle(normalizeVehicle(item)); setScreen("hub") }} style={G.btn()}>LOAD VEHICLE</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         )
