@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { searchPartsByVehicle, getMockPartsData, isApifyConfigured, fetchDatasetById } from "./services/apifyService"
 
 const MODELS_BY_MAKE = {
     Honda: ["Civic", "Accord", "CR-V", "HR-V", "Pilot"],
@@ -85,6 +86,11 @@ export default function MechanIqs() {
     const [input, setInput] = useState("")
     const [loading, setLoading] = useState(false)
     const [catFilter, setCatFilter] = useState("All")
+    const [partsData, setPartsData] = useState(PARTS) // Current parts data (mock or real)
+    const [loadingParts, setLoadingParts] = useState(false)
+    const [partsError, setPartsError] = useState(null)
+    const [partsSuccess, setPartsSuccess] = useState(null)
+    const [usingRealData, setUsingRealData] = useState(false)
     const chatEl = useRef(null)
 
     useEffect(() => {
@@ -137,8 +143,163 @@ export default function MechanIqs() {
         if (step < GUIDE.length - 1) setStep(s => s + 1)
     }
 
-    const categories = ["All", ...new Set(PARTS.map(p => p.cat))]
-    const visibleParts = catFilter === "All" ? PARTS : PARTS.filter(p => p.cat === catFilter)
+    const fetchRealParts = async () => {
+        if (!isApifyConfigured()) {
+            setPartsError("Apify API not configured. Add your API token to .env.local")
+            return
+        }
+
+        setLoadingParts(true)
+        setPartsError(null)
+        setPartsSuccess(null)
+        console.log('🔧 Fetching real parts for vehicle:', vehicle)
+
+        try {
+            const data = await searchPartsByVehicle(vehicle)
+            console.log('📦 Received data from Apify:', data)
+            console.log('📦 Data length:', data?.length || 0)
+
+            if (!data || data.length === 0) {
+                setPartsData(PARTS)
+                setUsingRealData(false)
+                setPartsError("No parts found in dataset. Using mock data instead.")
+                console.log('⚠️ No data returned, using mock data')
+                setLoadingParts(false)
+                return
+            }
+
+            // Transform Apify data to match our parts format
+            // Based on actual RockAuto scraper output: id, title, url, price, primaryImageUrl
+            const transformedParts = data.map((item, index) => {
+                console.log(`🔄 Transforming item ${index}:`, item)
+
+                // Extract price - handle different possible formats
+                const extractPrice = (priceVal) => {
+                    if (!priceVal) return 0
+                    if (typeof priceVal === 'number') return priceVal
+                    const match = priceVal.toString().match(/[\d,]+\.?\d*/)
+                    return match ? parseFloat(match[0].replace(/,/g, '')) : 0
+                }
+
+                // Get the price from various possible field names
+                const price = extractPrice(item.price || item.Price || item.aftermarketPrice || item.am || 0)
+
+                // Extract part name from title or other fields
+                const partName = item.title || item.Title || item.partName || item.name || item.Name || item.description || "Unknown Part"
+
+                // Try to extract category from title or use default
+                let category = item.category || item.Category || item.partCategory || "General"
+
+                // If title contains recognizable part types, use that as category
+                const titleLower = partName.toLowerCase()
+                if (titleLower.includes('brake')) category = "Brakes"
+                else if (titleLower.includes('engine') || titleLower.includes('oil') || titleLower.includes('filter')) category = "Engine"
+                else if (titleLower.includes('electrical') || titleLower.includes('battery')) category = "Electrical"
+                else if (titleLower.includes('hvac') || titleLower.includes('cabin') || titleLower.includes('air')) category = "HVAC"
+                else if (titleLower.includes('wiper') || titleLower.includes('exterior')) category = "Exterior"
+
+                return {
+                    id: item.id || index + 100,
+                    name: partName,
+                    cat: category,
+                    diff: 2, // Default difficulty
+                    time: "Varies",
+                    oem: Math.round(price * 2.5), // Estimate OEM price
+                    am: price,
+                    csat: 85, // Default satisfaction
+                    hasGuide: false,
+                    url: item.url || item.Url || null,
+                    image: item.primaryImageUrl || item.imageUrl || null,
+                }
+            })
+
+            console.log('✅ Transformed parts:', transformedParts)
+
+            if (transformedParts.length > 0) {
+                setPartsData(transformedParts)
+                setUsingRealData(true)
+                setPartsSuccess(`Successfully loaded ${transformedParts.length} parts from RockAuto!`)
+                console.log(`✅ Loaded ${transformedParts.length} real parts from RockAuto`)
+            } else {
+                setPartsData(PARTS)
+                setUsingRealData(false)
+                setPartsError("No parts found. Using mock data instead.")
+                console.log('⚠️ No parts found, using mock data')
+            }
+        } catch (error) {
+            console.error("❌ Error fetching parts:", error)
+            setPartsError(`Failed to fetch parts: ${error.message}`)
+            setPartsData(PARTS) // Fallback to mock data
+            setUsingRealData(false)
+        } finally {
+            setLoadingParts(false)
+        }
+    }
+
+    // Test function to load from a specific dataset ID (from successful Apify run)
+    const testLoadDataset = async () => {
+        const datasetId = prompt("Enter Apify Dataset ID (from your successful run in Apify console):")
+        if (!datasetId) return
+
+        setLoadingParts(true)
+        setPartsError(null)
+        setPartsSuccess(null)
+        console.log('🧪 Testing direct dataset load:', datasetId)
+
+        try {
+            const data = await fetchDatasetById(datasetId)
+            console.log('📦 Received data:', data)
+
+            if (!data || data.length === 0) {
+                setPartsError("No data in dataset")
+                setLoadingParts(false)
+                return
+            }
+
+            // Same transformation logic
+            const transformedParts = data.map((item, index) => {
+                const extractPrice = (priceVal) => {
+                    if (!priceVal) return 0
+                    if (typeof priceVal === 'number') return priceVal
+                    const match = priceVal.toString().match(/[\d,]+\.?\d*/)
+                    return match ? parseFloat(match[0].replace(/,/g, '')) : 0
+                }
+
+                const price = extractPrice(item.price || item.Price)
+                const partName = item.title || item.Title || item.partName || "Unknown Part"
+                let category = "General"
+
+                const titleLower = partName.toLowerCase()
+                if (titleLower.includes('brake')) category = "Brakes"
+                else if (titleLower.includes('engine') || titleLower.includes('oil') || titleLower.includes('filter')) category = "Engine"
+                else if (titleLower.includes('electrical') || titleLower.includes('battery')) category = "Electrical"
+
+                return {
+                    id: index + 100,
+                    name: partName,
+                    cat: category,
+                    diff: 2,
+                    time: "Varies",
+                    oem: Math.round(price * 2.5),
+                    am: price,
+                    csat: 85,
+                    hasGuide: false,
+                }
+            })
+
+            setPartsData(transformedParts)
+            setUsingRealData(true)
+            setPartsSuccess(`Test: Loaded ${transformedParts.length} parts from dataset!`)
+        } catch (error) {
+            console.error("❌ Error:", error)
+            setPartsError(`Failed: ${error.message}`)
+        } finally {
+            setLoadingParts(false)
+        }
+    }
+
+    const categories = ["All", ...new Set(partsData.map(p => p.cat))]
+    const visibleParts = catFilter === "All" ? partsData : partsData.filter(p => p.cat === catFilter)
 
     const G = {
         app: { minHeight: "100vh", background: "#0b0b0b", color: "#ede9e1", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", fontSize: "14px" },
@@ -151,7 +312,7 @@ export default function MechanIqs() {
 
     // ─── SELECTOR ──────────────────────────────────────────────────
     if (screen === "selector") {
-        const years = ["2026", "2025", "2024", "2023", "2022", "2021", "2020"]
+        const years = ["2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010"]
         const makes = Object.keys(MODELS_BY_MAKE)
         const models = vehicle.make ? MODELS_BY_MAKE[vehicle.make] : []
         const ready = vehicle.year && vehicle.make && vehicle.model
@@ -171,11 +332,11 @@ export default function MechanIqs() {
 
                     {/* Quick demo tile */}
                     <div
-                        onClick={() => { setVehicle({ year: "2026", make: "Honda", model: "Civic" }); setScreen("hub") }}
+                        onClick={() => { setVehicle({ year: "2014", make: "Toyota", model: "Camry" }); setScreen("hub") }}
                         style={{ border: "1px solid #e8890c", borderRadius: "4px", padding: "14px 18px", marginBottom: "28px", cursor: "pointer", background: "#0f0a00" }}
                     >
                         <div style={{ fontSize: "10px", color: "#e8890c", letterSpacing: "0.14em", marginBottom: "6px" }}>⚡  QUICK START — DEMO VEHICLE</div>
-                        <div style={{ fontSize: "16px", fontWeight: "700", marginBottom: "4px" }}>2026 Honda Civic Sport Hybrid</div>
+                        <div style={{ fontSize: "16px", fontWeight: "700", marginBottom: "4px" }}>2014 Toyota Camry</div>
                         <div style={{ fontSize: "12px", color: "#555" }}>Skip selector and explore all features →</div>
                     </div>
 
@@ -277,6 +438,49 @@ export default function MechanIqs() {
                         <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "4px" }}>{vehicle.year} {vehicle.make} {vehicle.model}</div>
                         <h2 style={{ fontSize: "20px", fontWeight: "700" }}>COMPATIBLE PARTS</h2>
                     </div>
+
+                    {/* Data source indicator and fetch button */}
+                    <div style={{ marginBottom: "18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "12px 14px", border: "1px solid #1e1e1e", borderRadius: "3px", background: "#0e0e0e" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <span style={{ fontSize: "11px", color: usingRealData ? "#4a9" : "#e8890c", letterSpacing: "0.1em" }}>
+                                {usingRealData ? "✓ LIVE DATA" : loadingParts ? "⏳ LOADING" : "⚠ MOCK DATA"}
+                            </span>
+                            <span style={{ fontSize: "11px", color: "#666" }}>
+                                {loadingParts
+                                    ? "Scraping RockAuto... This may take 30-60 seconds"
+                                    : usingRealData
+                                    ? `Showing ${partsData.length} real parts from RockAuto`
+                                    : "Demo data - click button to fetch real parts"}
+                            </span>
+                        </div>
+                        <button
+                            onClick={fetchRealParts}
+                            disabled={loadingParts || !isApifyConfigured()}
+                            style={{
+                                ...G.btn(loadingParts ? "#1e1e1e" : isApifyConfigured() ? "#e8890c" : "#2a2a2a"),
+                                color: loadingParts || !isApifyConfigured() ? "#666" : "#0b0b0b",
+                                cursor: loadingParts || !isApifyConfigured() ? "not-allowed" : "pointer",
+                                fontSize: "11px",
+                                padding: "8px 16px",
+                            }}
+                        >
+                            {loadingParts ? "FETCHING..." : isApifyConfigured() ? "FETCH REAL PARTS" : "API NOT CONFIGURED"}
+                        </button>
+                    </div>
+
+                    {/* Error message */}
+                    {partsError && (
+                        <div style={{ marginBottom: "18px", padding: "12px 14px", border: "1px solid #5a2a00", background: "#120a00", borderRadius: "3px", fontSize: "11px", color: "#e8a040", lineHeight: "1.6" }}>
+                            {partsError}
+                        </div>
+                    )}
+
+                    {/* Success message */}
+                    {partsSuccess && (
+                        <div style={{ marginBottom: "18px", padding: "12px 14px", border: "1px solid #2a5a2a", background: "#0a1a0a", borderRadius: "3px", fontSize: "11px", color: "#4a9", lineHeight: "1.6" }}>
+                            {partsSuccess}
+                        </div>
+                    )}
 
                     {/* Category filters */}
                     <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "18px" }}>
