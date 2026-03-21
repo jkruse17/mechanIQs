@@ -81,7 +81,7 @@ const MAINTENANCE = [
 const DIFF_LABEL = ["", "Easy", "Moderate", "Hard"]
 const DIFF_COLOR = ["", "#4a9", "#e8a020", "#e04444"]
 
-export default function CarFixr() {
+export default function MechanIqs() {
     const [screen, setScreen] = useState("selector")
     const [vehicle, setVehicle] = useState({ year: "", make: "", model: "", trim: "", odometer: "", vin: "" })
     const [selectedPart, setSelectedPart] = useState(null)
@@ -200,7 +200,7 @@ export default function CarFixr() {
                 body: JSON.stringify({
                     model: "claude-sonnet-4-20250514",
                     max_tokens: 1000,
-                    system: `You are CarFixr AI — a focused, practical car repair assistant. The user is working on a ${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim}. Current job: ${selectedPart?.name}. Current step (${step + 1}/${GUIDE.length}): "${cur?.title}". Step notes: "${cur?.detail}". Known gotcha: "${cur?.gotcha || 'none'}". Be direct and concise — under 120 words unless a safety point demands more. No markdown bullets unless listing tools. Address safety first when relevant.`,
+                    system: `You are MECHANIQS AI — a focused, practical car repair assistant. The user is working on a ${vehicle.year} ${vehicle.make} ${vehicle.model}. Current job: ${selectedPart?.name}. Current step (${step + 1}/${GUIDE.length}): "${cur?.title}". Step notes: "${cur?.detail}". Known gotcha: "${cur?.gotcha || 'none'}". Be direct and concise — under 120 words unless a safety point demands more. No markdown bullets unless listing tools. Address safety first when relevant.`,
                     messages: newMsgs,
                 }),
             })
@@ -250,7 +250,7 @@ export default function CarFixr() {
             <div style={G.app}>
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
-                    <span style={G.logo}>CARFIXR</span>
+                    <span style={G.logo}>MECHANIQS</span>
                     <span style={{ fontSize: "11px", color: "#444", letterSpacing: "0.1em" }}>HACKATHON DEMO · 2025</span>
                 </div>
                 <div style={{ maxWidth: "520px", margin: "0 auto", padding: "48px 20px" }}>
@@ -369,7 +369,7 @@ export default function CarFixr() {
                         <span style={G.logo}>MECHANIQS</span>
                     </div>
                     <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
-                    <span style={G.logo}>CARFIXR</span>
+                    <span style={G.logo}>MECHANIQS</span>
                     <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
                 </div>
                 <div style={{ maxWidth: "640px", margin: "0 auto", padding: "36px 20px" }}>
@@ -411,7 +411,7 @@ export default function CarFixr() {
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>CARFIXR</span>
+                        <span style={G.logo}>MECHANIQS</span>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ Maintenance</span>
                     </div>
                     <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
@@ -452,7 +452,7 @@ export default function CarFixr() {
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>CARFIXR</span>
+                        <span style={G.logo}>MECHANIQS</span>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ Parts</span>
                     </div>
                     <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
@@ -522,7 +522,7 @@ export default function CarFixr() {
                 {/* Topbar */}
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>CARFIXR</span>
+                        <span style={G.logo}>MECHANIQS</span>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ {selectedPart.name}</span>
                     </div>
                     <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
