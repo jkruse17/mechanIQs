@@ -231,8 +231,11 @@ export default function MechanIqs() {
             <div style={G.app}>
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
-                    <span style={G.logo}>MECHANIQS</span>
-                    <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <button onClick={() => setScreen("selector")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Back</button>
+                        <span style={G.logo}>MECHANIQS</span>
+                    </div>
+                    <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
                 </div>
                 <div style={{ maxWidth: "640px", margin: "0 auto", padding: "36px 20px" }}>
                     <div style={{ marginBottom: "32px" }}>
@@ -267,10 +270,12 @@ export default function MechanIqs() {
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <button onClick={() => setScreen("hub")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Back</button>
                         <span style={G.logo}>MECHANIQS</span>
-                        <span style={{ color: "#444", fontSize: "12px" }}>/ Parts</span>
+                        <span style={{ color: "#333", fontSize: "12px" }}>›</span>
+                        <span style={{ color: "#888", fontSize: "12px" }}>Parts</span>
                     </div>
-                    <button onClick={() => setScreen("hub")} style={G.ghost}>← HUB</button>
+                    <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
                 </div>
                 <div style={{ maxWidth: "760px", margin: "0 auto", padding: "28px 20px" }}>
                     <div style={{ marginBottom: "20px" }}>
@@ -337,13 +342,14 @@ export default function MechanIqs() {
                 {/* Topbar */}
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <button onClick={() => setScreen("parts")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Back</button>
                         <span style={G.logo}>MECHANIQS</span>
-                        <span style={{ color: "#444", fontSize: "12px" }}>/ {selectedPart.name}</span>
+                        <span style={{ color: "#333", fontSize: "12px" }}>›</span>
+                        <span style={{ color: "#666", fontSize: "11px", cursor: "pointer" }} onClick={() => setScreen("parts")}>Parts</span>
+                        <span style={{ color: "#333", fontSize: "12px" }}>›</span>
+                        <span style={{ color: "#888", fontSize: "11px" }}>{selectedPart.name}</span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
-                        <button onClick={() => setScreen("parts")} style={G.ghost}>← PARTS</button>
-                    </div>
+                    <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
                 </div>
 
                 {/* Main split */}
