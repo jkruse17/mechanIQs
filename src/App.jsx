@@ -80,10 +80,11 @@ const MAINTENANCE = [
 
 const DIFF_LABEL = ["", "Easy", "Moderate", "Hard"]
 const DIFF_COLOR = ["", "#4a9", "#e8a020", "#e04444"]
+const DEFAULT_VEHICLE = { year: "", make: "", model: "", trim: "", odometer: "", vin: "" }
 
 export default function MechanIqs() {
     const [screen, setScreen] = useState("selector")
-    const [vehicle, setVehicle] = useState({ year: "", make: "", model: "", trim: "", odometer: "", vin: "" })
+    const [vehicle, setVehicle] = useState(DEFAULT_VEHICLE)
     const [selectedPart, setSelectedPart] = useState(null)
     const [step, setStep] = useState(0)
     const [done, setDone] = useState([])
@@ -97,6 +98,20 @@ export default function MechanIqs() {
     const [vehicleError, setVehicleError] = useState("")
     const [useVin, setUseVin] = useState(false)
     const chatEl = useRef(null)
+
+    const goHome = () => {
+        setScreen("selector")
+        setVehicle(DEFAULT_VEHICLE)
+        setSelectedPart(null)
+        setStep(0)
+        setDone([])
+        setMsgs([])
+        setInput("")
+        setCatFilter("All")
+        setModelsBySelection([])
+        setVehicleError("")
+        setUseVin(false)
+    }
 
     useEffect(() => {
         if (chatEl.current) chatEl.current.scrollTop = chatEl.current.scrollHeight
@@ -235,6 +250,7 @@ export default function MechanIqs() {
         app: { minHeight: "100vh", background: "#0b0b0b", color: "#ede9e1", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", fontSize: "14px" },
         topbar: { height: "48px", borderBottom: "1px solid #222", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
         logo: { fontWeight: "700", fontSize: "16px", letterSpacing: "0.06em", color: "#e8890c" },
+        logoBtn: { background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" },
         ghost: { background: "none", border: "1px solid #2a2a2a", color: "#666", padding: "5px 12px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit", fontSize: "12px", letterSpacing: "0.04em" },
         pill: (active) => ({ background: active ? "#e8890c" : "#161616", border: `1px solid ${active ? "#e8890c" : "#2a2a2a"}`, color: active ? "#0b0b0b" : "#888", padding: "4px 12px", borderRadius: "20px", cursor: "pointer", fontFamily: "inherit", fontSize: "11px", fontWeight: active ? "700" : "400", letterSpacing: "0.05em" }),
         btn: (color = "#e8890c") => ({ background: color, border: "none", color: "#0b0b0b", padding: "10px 22px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit", fontWeight: "700", fontSize: "12px", letterSpacing: "0.06em" }),
@@ -250,7 +266,9 @@ export default function MechanIqs() {
             <div style={G.app}>
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
-                    <span style={G.logo}>MECHANIQS</span>
+                    <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                        <span style={G.logo}>MECHANIQS</span>
+                    </button>
                     <span style={{ fontSize: "11px", color: "#444", letterSpacing: "0.1em" }}>HACKATHON DEMO · 2025</span>
                 </div>
                 <div style={{ maxWidth: "520px", margin: "0 auto", padding: "48px 20px" }}>
@@ -366,10 +384,14 @@ export default function MechanIqs() {
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <button onClick={() => setScreen("selector")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Back</button>
-                        <span style={G.logo}>MECHANIQS</span>
+                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                            <span style={G.logo}>MECHANIQS</span>
+                        </button>
                     </div>
                     <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
-                    <span style={G.logo}>MECHANIQS</span>
+                    <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                        <span style={G.logo}>MECHANIQS</span>
+                    </button>
                     <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
                 </div>
                 <div style={{ maxWidth: "640px", margin: "0 auto", padding: "36px 20px" }}>
@@ -411,7 +433,9 @@ export default function MechanIqs() {
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>MECHANIQS</span>
+                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                            <span style={G.logo}>MECHANIQS</span>
+                        </button>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ Maintenance</span>
                     </div>
                     <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
@@ -452,7 +476,9 @@ export default function MechanIqs() {
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>MECHANIQS</span>
+                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                            <span style={G.logo}>MECHANIQS</span>
+                        </button>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ Parts</span>
                     </div>
                     <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
@@ -522,7 +548,9 @@ export default function MechanIqs() {
                 {/* Topbar */}
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>MECHANIQS</span>
+                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                            <span style={G.logo}>MECHANIQS</span>
+                        </button>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ {selectedPart.name}</span>
                     </div>
                     <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
