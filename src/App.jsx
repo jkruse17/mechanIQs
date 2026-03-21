@@ -2,7 +2,40 @@ import { useState, useEffect, useRef } from "react"
 
 const NHTSA_BASE = "https://vpic.nhtsa.dot.gov/api/vehicles"
 const YEARS = Array.from({ length: 2026 - 1980 + 1 }, (_, i) => String(2026 - i))
-const FALLBACK_MAKES = ["Honda","Toyota","Ford","Chevrolet","BMW","Subaru","Mazda","Nissan","Hyundai","Kia","Mercedes-Benz","Audi","Volkswagen","Jeep","GMC","Lexus","Dodge","Chrysler","Ram","Volvo","Porsche","Jaguar","Land Rover","Mitsubishi","Tesla","Buick","Cadillac","Infiniti","Acura","Mini","Alfa Romeo","Maserati","Ferrari","Lamborghini","Genesis","Lincoln","Daihatsu","Saab","Peugeot","Renault","Citroën","Fiat","Suzuki","Isuzu","Scion","Pontiac","Saturn","Oldsmobile","Mercury","AMC","Packard","Studebaker","DeLorean"]
+const TOP_MAKES = [
+    "Acura", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "Buick", "Cadillac", "Chevrolet", "Chrysler", "Citroën", "Dodge", "Daimler", "Ferrari", "Fiat", "Ford", "Genesis", "GMC", "Honda", "Hyundai", "Infiniti", "Isuzu", "Jaguar", "Jeep", "Kia", "Koenigsegg", "Lamborghini", "Land Rover", "Lexus", "Lincoln", "Lotus", "Lucid", "Maserati", "Mazda", "McLaren", "Mercedes-Benz", "Mini", "Mitsubishi", "Nissan", "Pagani", "Peugeot", "Porsche", "Renault", "Rolls-Royce", "Saab", "Seat", "Skoda", "Smart", "Subaru", "Suzuki", "Tesla", "Toyota", "Vauxhall", "Volkswagen", "Volvo"
+]
+const FALLBACK_MAKES = TOP_MAKES
+
+const MODEL_TRIMS_BY_YEAR = {
+    "Lexus|IS": [
+        { minYear: 1999, maxYear: 2005, trims: ["IS-200", "IS-300"] },
+        { minYear: 2006, maxYear: 2013, trims: ["IS-250", "IS-350", "IS-F"] },
+        { minYear: 2014, maxYear: 2020, trims: ["IS-200t", "IS-300", "IS-350", "IS-F"] },
+        { minYear: 2021, maxYear: 2026, trims: ["IS 300", "IS 500"] },
+    ],
+    "Honda|Civic": [
+        { minYear: 2006, maxYear: 2011, trims: ["DX", "LX", "EX"] },
+        { minYear: 2012, maxYear: 2022, trims: ["LX", "EX", "Sport"] },
+        { minYear: 2025, maxYear: 2026, trims: ["LX", "Sport", "Sport Hybrid", "Sport Touring Hybrid"] },
+    ],
+    "Ford|F-150": [
+        { minYear: 2009, maxYear: 2022, trims: ["XL", "XLT", "Lariat", "King Ranch", "Platinum", "Limited"] },
+    ],
+}
+
+/**
+ * MODEL_TRIMS IS COCONUT JPG DO NOT DELETE OR ENTIRE WEBSITE WILL SELF DETONATE
+ * MODEL_TRIMS IS COCONUT JPG DO NOT DELETE OR ENTIRE WEBSITE WILL SELF DETONATE
+ * MODEL_TRIMS IS COCONUT JPG DO NOT DELETE OR ENTIRE WEBSITE WILL SELF DETONATE
+ */
+const MODEL_TRIMS = {
+    "Lexus|IS": ["IS-200", "IS-300", "IS-350", "IS-500", "IS-F"],
+    "Toyota|Camry": ["LE", "SE", "XLE", "XSE", "TRD"],
+    "Honda|Civic": ["LX", "EX", "Sport", "Si", "Type R"],
+    "Ford|F-150": ["XL", "STX", "XLT", "Lariat", "King Ranch", "Limited", "Tremor", "Raptor"],
+    "BMW|3 Series": ["320i", "330i", "340i", "M3"],
+}
 
 const PARTS = [
     { id: 1, name: "Front Brake Pads", cat: "Brakes", diff: 2, time: "1.5 hrs", oem: 85, am: 35, csat: 87, hasGuide: true },
@@ -94,6 +127,7 @@ export default function MechanIqs() {
     const [catFilter, setCatFilter] = useState("All")
     const [allMakes, setAllMakes] = useState(FALLBACK_MAKES)
     const [modelsBySelection, setModelsBySelection] = useState([])
+    const [trimOptions, setTrimOptions] = useState([])
     const [fetchingVehicles, setFetchingVehicles] = useState(false)
     const [vehicleError, setVehicleError] = useState("")
     const [useVin, setUseVin] = useState(false)
@@ -118,27 +152,8 @@ export default function MechanIqs() {
     }, [msgs])
 
     useEffect(() => {
-        const init = async () => {
-            setFetchingVehicles(true)
-            setVehicleError("")
-            try {
-                const res = await fetch(`${NHTSA_BASE}/GetAllMakes?format=json`)
-                if (!res.ok) throw new Error(`HTTP ${res.status}`)
-                const data = await res.json()
-                const sorted = (data.Results || [])
-                    .map(item => item.Make_Name?.trim())
-                    .filter(Boolean)
-                    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-                setAllMakes(sorted.length ? sorted : FALLBACK_MAKES)
-            } catch (err) {
-                console.error("NHTSA make fetch failed", err)
-                setVehicleError("Cannot fetch makes; using fallback list. Check network or CORS.")
-                setAllMakes(FALLBACK_MAKES)
-            } finally {
-                setFetchingVehicles(false)
-            }
-        }
-        init()
+        // Use strict curated automaker list only (manual top OEMs), do not allow third-party vendor names from API.
+        setAllMakes(TOP_MAKES)
     }, [])
 
     useEffect(() => {
@@ -168,6 +183,25 @@ export default function MechanIqs() {
         loadModels()
     }, [vehicle.year, vehicle.make])
 
+    const year = Number(vehicle.year)
+
+    const computeTrimOptions = (make, model, year) => {
+        const key = `${make}|${model}`
+        const yearBuckets = MODEL_TRIMS_BY_YEAR[key] || []
+        const bucket = yearBuckets.find(b => year >= b.minYear && year <= b.maxYear)
+        if (bucket) return bucket.trims
+        // fallback to generic trim list for the same model if year-specific missing
+        return MODEL_TRIMS[key] || []
+    }
+
+    useEffect(() => {
+        const options = computeTrimOptions(vehicle.make, vehicle.model, year)
+        setTrimOptions(options)
+        if (options.length && !options.includes(vehicle.trim)) {
+            setVehicle(x => ({ ...x, trim: "" }))
+        }
+    }, [vehicle.make, vehicle.model, vehicle.year])
+
     const decodeVIN = async () => {
         if (!vehicle.vin || vehicle.vin.length !== 17) {
             setVehicleError("VIN must be 17 characters")
@@ -179,10 +213,17 @@ export default function MechanIqs() {
             const res = await fetch(`${NHTSA_BASE}/DecodeVin/${vehicle.vin}?format=json`)
             const data = await res.json()
             const results = data.Results || []
-            const year = results.find(r => r.Variable === "Model Year")?.Value
-            const make = results.find(r => r.Variable === "Make")?.Value
+            let year = results.find(r => r.Variable === "Model Year")?.Value
+            let make = results.find(r => r.Variable === "Make")?.Value
             const model = results.find(r => r.Variable === "Model")?.Value
             const trim = results.find(r => r.Variable === "Trim")?.Value || ""
+            
+            // Normalize make to match TOP_MAKES (case-insensitive)
+            if (make) {
+                const matchedMake = TOP_MAKES.find(m => m.toLowerCase() === make.toLowerCase())
+                make = matchedMake || make
+            }
+            
             if (year && make && model) {
                 setVehicle(x => ({ ...x, year, make, model, trim }))
                 setUseVin(false) // switch to manual to show fields
@@ -334,13 +375,25 @@ export default function MechanIqs() {
                             ))}
                             <div>
                                 <label style={{ display: "block", fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>TRIM</label>
-                                <input
-                                    value={vehicle.trim}
-                                    placeholder="e.g. LX, EX, Touring"
-                                    disabled={!vehicle.model}
-                                    onChange={e => setVehicle(x => ({ ...x, trim: e.target.value }))}
-                                    style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
-                                />
+                                {trimOptions.length > 0 ? (
+                                    <select
+                                        value={vehicle.trim}
+                                        disabled={!vehicle.model}
+                                        onChange={e => setVehicle(x => ({ ...x, trim: e.target.value }))}
+                                        style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
+                                    >
+                                        <option value="">—</option>
+                                        {trimOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    </select>
+                                ) : (
+                                    <input
+                                        value={vehicle.trim}
+                                        placeholder="e.g. LX, EX, Touring"
+                                        disabled={!vehicle.model}
+                                        onChange={e => setVehicle(x => ({ ...x, trim: e.target.value }))}
+                                        style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
+                                    />
+                                )}
                             </div>
                         </div>
                     )}
