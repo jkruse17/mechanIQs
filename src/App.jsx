@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react"
-import spinningWrench from "./spinning wrench.gif"
 
 const NHTSA_BASE = "https://vpic.nhtsa.dot.gov/api/vehicles"
 const YEARS = Array.from({ length: 2026 - 1980 + 1 }, (_, i) => String(2026 - i))
@@ -256,11 +255,6 @@ export default function MechanIqs() {
                 </div>
                 <div style={{ maxWidth: "520px", margin: "0 auto", padding: "48px 20px" }}>
                     <div style={{ marginBottom: "36px" }}>
-                        <img
-                            src={spinningWrench}
-                            alt="Spinning wrench"
-                            style={{ width: "56px", height: "56px", display: "block", marginBottom: "14px" }}
-                        />
                         <div style={{ fontSize: "11px", color: "#e8890c", letterSpacing: "0.14em", marginBottom: "10px" }}>VEHICLE-SPECIFIC CAR REPAIR</div>
                         <h1 style={{ fontSize: "30px", fontWeight: "700", lineHeight: "1.2", marginBottom: "10px" }}>What are you<br />working on today?</h1>
                         <p style={{ color: "#666", fontSize: "13px", lineHeight: "1.6" }}>Select your vehicle to get guided repairs, part pricing, and an AI assistant that knows your exact car.</p>
