@@ -1,14 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 
-const MODELS_BY_MAKE = {
-    Honda: ["Civic", "Accord", "CR-V", "HR-V", "Pilot"],
-    Toyota: ["Camry", "Corolla", "RAV4", "Prius", "Tacoma"],
-    Ford: ["F-150", "Mustang", "Explorer", "Bronco", "Escape"],
-    Chevrolet: ["Silverado", "Equinox", "Malibu", "Tahoe", "Traverse"],
-    BMW: ["3 Series", "5 Series", "X3", "X5", "M3"],
-    Subaru: ["Outback", "Forester", "Crosstrek", "Impreza", "WRX"],
-    Mazda: ["Mazda3", "Mazda6", "CX-5", "CX-30", "MX-5 Miata"],
-}
+const NHTSA_BASE = "https://vpic.nhtsa.dot.gov/api/vehicles"
+const YEARS = Array.from({ length: 2026 - 1980 + 1 }, (_, i) => String(2026 - i))
+const FALLBACK_MAKES = ["Honda","Toyota","Ford","Chevrolet","BMW","Subaru","Mazda","Nissan","Hyundai","Kia","Mercedes-Benz","Audi","Volkswagen","Jeep","GMC","Lexus","Dodge","Chrysler","Ram","Volvo","Porsche","Jaguar","Land Rover","Mitsubishi","Tesla","Buick","Cadillac","Infiniti","Acura","Mini","Alfa Romeo","Maserati","Ferrari","Lamborghini","Genesis","Lincoln","Daihatsu","Saab","Peugeot","Renault","Citroën","Fiat","Suzuki","Isuzu","Scion","Pontiac","Saturn","Oldsmobile","Mercury","AMC","Packard","Studebaker","DeLorean"]
 
 const PARTS = [
     { id: 1, name: "Front Brake Pads", cat: "Brakes", diff: 2, time: "1.5 hrs", oem: 85, am: 35, csat: 87, hasGuide: true },
@@ -72,12 +66,24 @@ const GUIDE = [
     },
 ]
 
+const MAINTENANCE = [
+    { name: "Oil Change", interval: 5000, category: "Engine" },
+    { name: "Tire Rotation", interval: 5000, category: "Tires" },
+    { name: "Brake Inspection", interval: 10000, category: "Brakes" },
+    { name: "Spark Plugs Replacement", interval: 30000, category: "Engine" },
+    { name: "Air Filter Replacement", interval: 15000, category: "Engine" },
+    { name: "Cabin Air Filter Replacement", interval: 15000, category: "HVAC" },
+    { name: "Transmission Fluid Change", interval: 30000, category: "Transmission" },
+    { name: "Coolant Flush", interval: 30000, category: "Cooling" },
+    { name: "Battery Check", interval: 5000, category: "Electrical" },
+]
+
 const DIFF_LABEL = ["", "Easy", "Moderate", "Hard"]
 const DIFF_COLOR = ["", "#4a9", "#e8a020", "#e04444"]
 
-export default function MechanIqs() {
+export default function CarFixr() {
     const [screen, setScreen] = useState("selector")
-    const [vehicle, setVehicle] = useState({ year: "", make: "", model: "" })
+    const [vehicle, setVehicle] = useState({ year: "", make: "", model: "", trim: "", odometer: "", vin: "" })
     const [selectedPart, setSelectedPart] = useState(null)
     const [step, setStep] = useState(0)
     const [done, setDone] = useState([])
@@ -85,11 +91,96 @@ export default function MechanIqs() {
     const [input, setInput] = useState("")
     const [loading, setLoading] = useState(false)
     const [catFilter, setCatFilter] = useState("All")
+    const [allMakes, setAllMakes] = useState(FALLBACK_MAKES)
+    const [modelsBySelection, setModelsBySelection] = useState([])
+    const [fetchingVehicles, setFetchingVehicles] = useState(false)
+    const [vehicleError, setVehicleError] = useState("")
+    const [useVin, setUseVin] = useState(false)
     const chatEl = useRef(null)
 
     useEffect(() => {
         if (chatEl.current) chatEl.current.scrollTop = chatEl.current.scrollHeight
     }, [msgs])
+
+    useEffect(() => {
+        const init = async () => {
+            setFetchingVehicles(true)
+            setVehicleError("")
+            try {
+                const res = await fetch(`${NHTSA_BASE}/GetAllMakes?format=json`)
+                if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                const data = await res.json()
+                const sorted = (data.Results || [])
+                    .map(item => item.Make_Name?.trim())
+                    .filter(Boolean)
+                    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+                setAllMakes(sorted.length ? sorted : FALLBACK_MAKES)
+            } catch (err) {
+                console.error("NHTSA make fetch failed", err)
+                setVehicleError("Cannot fetch makes; using fallback list. Check network or CORS.")
+                setAllMakes(FALLBACK_MAKES)
+            } finally {
+                setFetchingVehicles(false)
+            }
+        }
+        init()
+    }, [])
+
+    useEffect(() => {
+        if (!vehicle.year || !vehicle.make) {
+            setModelsBySelection([])
+            return
+        }
+
+        const loadModels = async () => {
+            setFetchingVehicles(true)
+            try {
+                const res = await fetch(`${NHTSA_BASE}/GetModelsForMakeYear/make/${encodeURIComponent(vehicle.make)}/modelyear/${encodeURIComponent(vehicle.year)}?format=json`)
+                const data = await res.json()
+                const models = (data.Results || [])
+                    .map(item => item.Model_Name?.trim())
+                    .filter(Boolean)
+                    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+                setModelsBySelection([...new Set(models)])
+            } catch (err) {
+                console.error("NHTSA model fetch failed", err)
+                setModelsBySelection([])
+            } finally {
+                setFetchingVehicles(false)
+            }
+        }
+
+        loadModels()
+    }, [vehicle.year, vehicle.make])
+
+    const decodeVIN = async () => {
+        if (!vehicle.vin || vehicle.vin.length !== 17) {
+            setVehicleError("VIN must be 17 characters")
+            return
+        }
+        setFetchingVehicles(true)
+        setVehicleError("")
+        try {
+            const res = await fetch(`${NHTSA_BASE}/DecodeVin/${vehicle.vin}?format=json`)
+            const data = await res.json()
+            const results = data.Results || []
+            const year = results.find(r => r.Variable === "Model Year")?.Value
+            const make = results.find(r => r.Variable === "Make")?.Value
+            const model = results.find(r => r.Variable === "Model")?.Value
+            const trim = results.find(r => r.Variable === "Trim")?.Value || ""
+            if (year && make && model) {
+                setVehicle(x => ({ ...x, year, make, model, trim }))
+                setUseVin(false) // switch to manual to show fields
+            } else {
+                setVehicleError("Could not decode VIN")
+            }
+        } catch (err) {
+            console.error("VIN decode failed", err)
+            setVehicleError("VIN decode failed")
+        } finally {
+            setFetchingVehicles(false)
+        }
+    }
 
     const sendAI = async (text) => {
         if (!text.trim() || loading) return
@@ -109,7 +200,7 @@ export default function MechanIqs() {
                 body: JSON.stringify({
                     model: "claude-sonnet-4-20250514",
                     max_tokens: 1000,
-                    system: `You are MECHANIQS AI — a focused, practical car repair assistant. The user is working on a ${vehicle.year} ${vehicle.make} ${vehicle.model}. Current job: ${selectedPart?.name}. Current step (${step + 1}/${GUIDE.length}): "${cur?.title}". Step notes: "${cur?.detail}". Known gotcha: "${cur?.gotcha || 'none'}". Be direct and concise — under 120 words unless a safety point demands more. No markdown bullets unless listing tools. Address safety first when relevant.`,
+                    system: `You are CarFixr AI — a focused, practical car repair assistant. The user is working on a ${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim}. Current job: ${selectedPart?.name}. Current step (${step + 1}/${GUIDE.length}): "${cur?.title}". Step notes: "${cur?.detail}". Known gotcha: "${cur?.gotcha || 'none'}". Be direct and concise — under 120 words unless a safety point demands more. No markdown bullets unless listing tools. Address safety first when relevant.`,
                     messages: newMsgs,
                 }),
             })
@@ -127,7 +218,7 @@ export default function MechanIqs() {
         setDone([])
         setMsgs([{
             role: "assistant",
-            content: `Ready. I've got context on your ${vehicle.year} ${vehicle.make} ${vehicle.model} and the ${part.name} job. Ask me anything — torque specs, gotchas, whether something looks right, or if it's safe to skip a step. Let's get it done.`,
+            content: `Ready. I've got context on your ${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim} and the ${part.name} job. Ask me anything — torque specs, gotchas, whether something looks right, or if it's safe to skip a step. Let's get it done.`,
         }])
         setScreen("repair")
     }
@@ -151,15 +242,15 @@ export default function MechanIqs() {
 
     // ─── SELECTOR ──────────────────────────────────────────────────
     if (screen === "selector") {
-        const years = ["2026", "2025", "2024", "2023", "2022", "2021", "2020"]
-        const makes = Object.keys(MODELS_BY_MAKE)
-        const models = vehicle.make ? MODELS_BY_MAKE[vehicle.make] : []
-        const ready = vehicle.year && vehicle.make && vehicle.model
+        const years = YEARS
+        const makes = allMakes
+        const models = modelsBySelection
+        const ready = vehicle.year && vehicle.make && vehicle.model && vehicle.trim && vehicle.odometer
         return (
             <div style={G.app}>
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
-                    <span style={G.logo}>MECHANIQS</span>
+                    <span style={G.logo}>CARFIXR</span>
                     <span style={{ fontSize: "11px", color: "#444", letterSpacing: "0.1em" }}>HACKATHON DEMO · 2025</span>
                 </div>
                 <div style={{ maxWidth: "520px", margin: "0 auto", padding: "48px 20px" }}>
@@ -171,7 +262,7 @@ export default function MechanIqs() {
 
                     {/* Quick demo tile */}
                     <div
-                        onClick={() => { setVehicle({ year: "2026", make: "Honda", model: "Civic" }); setScreen("hub") }}
+                        onClick={() => { setVehicle({ year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000" }); setScreen("maintenance") }}
                         style={{ border: "1px solid #e8890c", borderRadius: "4px", padding: "14px 18px", marginBottom: "28px", cursor: "pointer", background: "#0f0a00" }}
                     >
                         <div style={{ fontSize: "10px", color: "#e8890c", letterSpacing: "0.14em", marginBottom: "6px" }}>⚡  QUICK START — DEMO VEHICLE</div>
@@ -179,40 +270,82 @@ export default function MechanIqs() {
                         <div style={{ fontSize: "12px", color: "#555" }}>Skip selector and explore all features →</div>
                     </div>
 
-                    <div style={{ fontSize: "11px", color: "#444", letterSpacing: "0.1em", marginBottom: "14px" }}>— OR SELECT YOUR VEHICLE —</div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "22px" }}>
-                        {[
-                            { label: "YEAR", key: "year", opts: years },
-                            { label: "MAKE", key: "make", opts: makes },
-                            { label: "MODEL", key: "model", opts: models },
-                        ].map(({ label, key, opts }) => (
-                            <div key={key}>
-                                <label style={{ display: "block", fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>{label}</label>
-                                <select
-                                    value={vehicle[key]}
-                                    disabled={key !== "year" && !vehicle.year || key === "model" && !vehicle.make}
-                                    onChange={e => {
-                                        const v = e.target.value
-                                        if (key === "year") setVehicle({ year: v, make: "", model: "" })
-                                        else if (key === "make") setVehicle(x => ({ ...x, make: v, model: "" }))
-                                        else setVehicle(x => ({ ...x, model: v }))
-                                    }}
-                                    style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
-                                >
-                                    <option value="">—</option>
-                                    {opts.map(o => <option key={o} value={o}>{o}</option>)}
-                                </select>
-                            </div>
-                        ))}
+                    <div style={{ marginBottom: "14px" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "#888" }}>
+                            <input type="checkbox" checked={useVin} onChange={e => setUseVin(e.target.checked)} />
+                            Use VIN instead of manual selection
+                        </label>
                     </div>
 
+                    <div style={{ fontSize: "11px", color: "#444", letterSpacing: "0.1em", marginBottom: "14px" }}>— OR SELECT YOUR VEHICLE —</div>
+
+                    {useVin ? (
+                        <div style={{ marginBottom: "22px" }}>
+                            <label style={{ display: "block", fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>VIN</label>
+                            <input
+                                value={vehicle.vin}
+                                placeholder="17-character VIN"
+                                onChange={e => setVehicle(x => ({ ...x, vin: e.target.value.toUpperCase() }))}
+                                style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
+                            />
+                        </div>
+                    ) : (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px", marginBottom: "22px" }}>
+                            {[
+                                { label: "YEAR", key: "year", opts: years },
+                                { label: "MAKE", key: "make", opts: makes },
+                                { label: "MODEL", key: "model", opts: models },
+                            ].map(({ label, key, opts }) => (
+                                <div key={key}>
+                                    <label style={{ display: "block", fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>{label}</label>
+                                    <select
+                                        value={vehicle[key]}
+                                        disabled={key !== "year" && !vehicle.year || key === "model" && !vehicle.make}
+                                        onChange={e => {
+                                            const v = e.target.value
+                                            if (key === "year") setVehicle({ year: v, make: "", model: "", trim: "" })
+                                            else if (key === "make") setVehicle(x => ({ ...x, make: v, model: "", trim: "" }))
+                                            else setVehicle(x => ({ ...x, model: v, trim: "" }))
+                                        }}
+                                        style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
+                                    >
+                                        <option value="">—</option>
+                                        {opts.map(o => <option key={o} value={o}>{o}</option>)}
+                                    </select>
+                                </div>
+                            ))}
+                            <div>
+                                <label style={{ display: "block", fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>TRIM</label>
+                                <input
+                                    value={vehicle.trim}
+                                    placeholder="e.g. LX, EX, Touring"
+                                    disabled={!vehicle.model}
+                                    onChange={e => setVehicle(x => ({ ...x, trim: e.target.value }))}
+                                    style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ marginBottom: "22px" }}>
+                        <label style={{ display: "block", fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>CURRENT ODOMETER (MILES)</label>
+                        <input
+                            type="number"
+                            value={vehicle.odometer}
+                            placeholder="e.g. 45000"
+                            onChange={e => setVehicle(x => ({ ...x, odometer: e.target.value }))}
+                            style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
+                        />
+                    </div>
+
+                    {vehicleError && <p style={{ color: "#e04444", fontSize: "12px", marginBottom: "22px" }}>{vehicleError}</p>}
+
                     <button
-                        disabled={!ready}
-                        onClick={() => setScreen("hub")}
-                        style={{ ...G.btn(ready ? "#e8890c" : "#1e1e1e"), color: ready ? "#0b0b0b" : "#444", cursor: ready ? "pointer" : "not-allowed", width: "100%", padding: "13px" }}
+                        disabled={useVin ? !vehicle.vin : !ready}
+                        onClick={useVin ? decodeVIN : () => setScreen("maintenance")}
+                        style={{ ...G.btn(useVin ? vehicle.vin : ready ? "#e8890c" : "#1e1e1e"), color: useVin ? (vehicle.vin ? "#0b0b0b" : "#444") : (ready ? "#0b0b0b" : "#444"), cursor: useVin ? (vehicle.vin ? "pointer" : "not-allowed") : (ready ? "pointer" : "not-allowed"), width: "100%", padding: "13px" }}
                     >
-                        LOAD VEHICLE →
+                        {useVin ? "DECODE VIN →" : "GET MAINTENANCE →"}
                     </button>
                 </div>
             </div>
@@ -224,14 +357,14 @@ export default function MechanIqs() {
         const tiles = [
             { icon: "⬡", label: "Parts Catalog", sub: "OEM vs aftermarket with fitment", action: () => setScreen("parts"), live: true },
             { icon: "◈", label: "AI Symptom Diagnosis", sub: "Describe it — get ranked causes", action: null, live: false },
-            { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: null, live: false },
+            { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: () => setScreen("maintenance"), live: true },
             { icon: "⚑", label: "OBD-II Code Lookup", sub: "Paste a fault code for plain English", action: null, live: false },
         ]
         return (
             <div style={G.app}>
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
-                    <span style={G.logo}>MECHANIQS</span>
+                    <span style={G.logo}>CARFIXR</span>
                     <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
                 </div>
                 <div style={{ maxWidth: "640px", margin: "0 auto", padding: "36px 20px" }}>
@@ -260,6 +393,53 @@ export default function MechanIqs() {
         )
     }
 
+    // ─── MAINTENANCE ──────────────────────────────────────────────────
+    if (screen === "maintenance") {
+        const odometer = parseInt(vehicle.odometer) || 0
+        const maintenanceList = MAINTENANCE.map(item => {
+            const nextDue = Math.ceil(odometer / item.interval) * item.interval
+            const isDue = nextDue === odometer
+            return { ...item, nextDue, isDue }
+        })
+        return (
+            <div style={G.app}>
+                <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
+                <div style={G.topbar}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <span style={G.logo}>CARFIXR</span>
+                        <span style={{ color: "#444", fontSize: "12px" }}>/ Maintenance</span>
+                    </div>
+                    <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
+                </div>
+                <div style={{ maxWidth: "640px", margin: "0 auto", padding: "36px 20px" }}>
+                    <div style={{ marginBottom: "32px" }}>
+                        <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>MAINTENANCE SCHEDULE</div>
+                        <h2 style={{ fontSize: "26px", fontWeight: "700" }}>{vehicle.year} {vehicle.make} {vehicle.model}</h2>
+                        <p style={{ color: "#666", fontSize: "13px", lineHeight: "1.6" }}>Current odometer: {vehicle.odometer} miles</p>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {maintenanceList.map(item => (
+                            <div key={item.name} style={{ border: "1px solid #2a2a2a", borderRadius: "4px", padding: "18px", background: "#0e0e0e" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <div>
+                                        <div style={{ fontWeight: "700", fontSize: "15px", marginBottom: "4px" }}>{item.name}</div>
+                                        <div style={{ fontSize: "12px", color: "#555" }}>Every {item.interval.toLocaleString()} miles • {item.category}</div>
+                                    </div>
+                                    <div style={{ textAlign: "right" }}>
+                                        <div style={{ fontSize: "14px", color: item.isDue ? "#e8890c" : "#888", fontWeight: "700" }}>{item.isDue ? "DUE NOW" : `Due at ${item.nextDue.toLocaleString()} miles`}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ marginTop: "32px", textAlign: "center" }}>
+                        <button onClick={() => setScreen("parts")} style={G.btn()}>BROWSE PARTS CATALOG →</button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     // ─── PARTS CATALOG ─────────────────────────────────────────────
     if (screen === "parts") {
         return (
@@ -267,7 +447,7 @@ export default function MechanIqs() {
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>MECHANIQS</span>
+                        <span style={G.logo}>CARFIXR</span>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ Parts</span>
                     </div>
                     <button onClick={() => setScreen("hub")} style={G.ghost}>← HUB</button>
@@ -337,7 +517,7 @@ export default function MechanIqs() {
                 {/* Topbar */}
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>MECHANIQS</span>
+                        <span style={G.logo}>CARFIXR</span>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ {selectedPart.name}</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -478,4 +658,23 @@ export default function MechanIqs() {
     }
 
     return null
+}
+
+const decodeVin = async (vin) => {
+    const res = await fetch(`/api/nhtsa?type=decodeVin&vin=${vin}`)
+    const data = await res.json()
+
+    // Flatten the key-value array into a usable object
+    const decoded = {}
+    data.Results.forEach(item => {
+        decoded[item.Variable] = item.Value
+    })
+
+    // Auto-populate vehicle state
+    setVehicle({
+        year: decoded['Model Year'] || '',
+        make: decoded['Make'] || '',
+        model: decoded['Model'] || '',
+        trim: decoded['Trim'] || '',
+    })
 }
