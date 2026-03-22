@@ -35,7 +35,7 @@ export default function MaintenancePage({ G, goHome, vehicle, maintenanceList, s
                     ))}
                 </div>
                 <div style={{ marginTop: "32px", textAlign: "center" }}>
-                    <button onClick={() => setScreen("parts")} style={G.btn()}>BROWSE PARTS CATALOG →</button>
+                    <button onClick={() => setScreen("repairs")} style={G.btn()}>BROWSE REPAIR CATALOG →</button>
                 </div>
             </div>
         </div>

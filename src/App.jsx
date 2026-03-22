@@ -23,6 +23,7 @@ import HubPage from "./pages/HubPage"
 import GaragePage from "./pages/GaragePage"
 import MaintenancePage from "./pages/MaintenancePage"
 import PartsPage from "./pages/PartsPage"
+import RepairsPage from "./pages/RepairsPage"
 import RepairPage from "./pages/RepairPage"
 import SymptomDiagnosisPage from "./pages/SymptomDiagnosisPage"
 
@@ -297,7 +298,6 @@ export default function MechanIqs() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: "openai/gpt-4o-mini",
                     maxTokens: 450,
                     temperature: 0.5,
                     systemPrompt: `You are MECHANIQS AI, a focused practical repair assistant. Vehicle context: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}. Job: ${selectedPart?.name || "unknown"}. Current step (${step + 1}/${GUIDE.length}): "${cur?.title}". Step notes: "${cur?.detail}". Gotcha: "${cur?.gotcha || "none"}". Give concise and safe guidance in plain text. Highlight safety-critical mistakes first. If uncertain, say what to verify before proceeding.`,
@@ -349,8 +349,11 @@ export default function MechanIqs() {
         setDiagnosisLoading(false)
     }
 
-    const startRepair = async (part) => {
-        await fetchLiveParts(part.name)
+    const startRepair = async (part, options = {}) => {
+        const { skipFetch = false } = options
+        if (!skipFetch) {
+            await fetchLiveParts(part.name)
+        }
         setActiveGuide(buildGuideForPart(part, vehicle))
         setSelectedPart(part)
         setStep(0)
@@ -360,6 +363,14 @@ export default function MechanIqs() {
             content: `Ready. I've got context on your ${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim} and the ${part.name} job. Ask me anything — torque specs, gotchas, whether something looks right, or if it's safe to skip a step. Let's get it done.`,
         }])
         setScreen("repair")
+    }
+
+    const chooseRepairAndShowCompatible = async (part) => {
+        setSelectedPart(part)
+        setActiveGuide(buildGuideForPart(part, vehicle))
+        setCatFilter("All")
+        await fetchLiveParts(part.name)
+        setScreen("parts")
     }
 
     const choosePartOnly = (part) => {
@@ -389,9 +400,10 @@ export default function MechanIqs() {
         return { ...item, nextDue, isDue }
     })
 
-    const catalogParts = liveParts.length ? liveParts : PARTS
-    const categories = ["All", ...new Set(catalogParts.map(p => p.cat))]
-    const visibleParts = catFilter === "All" ? catalogParts : catalogParts.filter(p => p.cat === catFilter)
+    const repairCategories = ["All", ...new Set(PARTS.map(p => p.cat))]
+    const visibleRepairParts = catFilter === "All" ? PARTS : PARTS.filter(p => p.cat === catFilter)
+    const compatibleCategories = ["All", ...new Set(liveParts.map(p => p.cat))]
+    const visibleCompatibleParts = catFilter === "All" ? liveParts : liveParts.filter(p => p.cat === catFilter)
 
     if (screen === "selector") {
         return (
@@ -438,6 +450,26 @@ export default function MechanIqs() {
         return <MaintenancePage G={G} goHome={goHome} vehicle={vehicle} maintenanceList={maintenanceList} setScreen={setScreen} />
     }
 
+    if (screen === "repairs") {
+        return (
+            <RepairsPage
+                G={G}
+                goHome={goHome}
+                vehicle={vehicle}
+                selectedPart={selectedPart}
+                goToTutorial={goToTutorial}
+                categories={repairCategories}
+                catFilter={catFilter}
+                setCatFilter={setCatFilter}
+                visibleParts={visibleRepairParts}
+                diffColor={DIFF_COLOR}
+                diffLabel={DIFF_LABEL}
+                partsLoading={partsLoading}
+                chooseRepairAndShowCompatible={chooseRepairAndShowCompatible}
+            />
+        )
+    }
+
     if (screen === "parts") {
         return (
             <PartsPage
@@ -446,15 +478,12 @@ export default function MechanIqs() {
                 vehicle={vehicle}
                 partsLoading={partsLoading}
                 partsError={partsError}
-                categories={categories}
+                categories={compatibleCategories}
                 catFilter={catFilter}
                 setCatFilter={setCatFilter}
-                visibleParts={visibleParts}
-                diffColor={DIFF_COLOR}
-                diffLabel={DIFF_LABEL}
+                visibleParts={visibleCompatibleParts}
                 startRepair={startRepair}
                 selectedPart={selectedPart}
-                choosePartOnly={choosePartOnly}
                 goToTutorial={goToTutorial}
             />
         )
