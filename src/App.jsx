@@ -21,6 +21,7 @@ import GaragePage from "./pages/GaragePage"
 import MaintenancePage from "./pages/MaintenancePage"
 import PartsPage from "./pages/PartsPage"
 import RepairPage from "./pages/RepairPage"
+import SymptomDiagnosisPage from "./pages/SymptomDiagnosisPage"
 
 export default function MechanIqs() {
     const [screen, setScreen] = useState("hub")
@@ -43,7 +44,11 @@ export default function MechanIqs() {
     const [partsError, setPartsError] = useState("")
     const [garage, setGarage] = useState([])
     const [editingVehicleKey, setEditingVehicleKey] = useState("")
+    const [diagnosisMsgs, setDiagnosisMsgs] = useState([])
+    const [diagnosisInput, setDiagnosisInput] = useState("")
+    const [diagnosisLoading, setDiagnosisLoading] = useState(false)
     const chatEl = useRef(null)
+    const diagnosisChatEl = useRef(null)
 
     const addVehicleToGarage = (v) => {
         const normalized = normalizeVehicle(v)
@@ -138,6 +143,10 @@ export default function MechanIqs() {
     useEffect(() => {
         if (chatEl.current) chatEl.current.scrollTop = chatEl.current.scrollHeight
     }, [msgs])
+
+    useEffect(() => {
+        if (diagnosisChatEl.current) diagnosisChatEl.current.scrollTop = diagnosisChatEl.current.scrollHeight
+    }, [diagnosisMsgs])
 
     useEffect(() => {
         setAllMakes(TOP_MAKES)
@@ -250,26 +259,59 @@ export default function MechanIqs() {
         setInput("")
         setLoading(true)
         try {
-            const res = await fetch("https://api.anthropic.com/v1/messages", {
+            const res = await fetch("/api/ai-chat", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
-                    "anthropic-version": "2023-06-01",
                 },
                 body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 1000,
-                    system: `You are MECHANIQS AI — a focused, practical car repair assistant. The user is working on a ${vehicle.year} ${vehicle.make} ${vehicle.model}. Current job: ${selectedPart?.name}. Current step (${step + 1}/${GUIDE.length}): "${cur?.title}". Step notes: "${cur?.detail}". Known gotcha: "${cur?.gotcha || "none"}". Be direct and concise — under 120 words unless a safety point demands more. No markdown bullets unless listing tools. Address safety first when relevant.`,
+                    model: "openai/gpt-4o-mini",
+                    maxTokens: 450,
+                    temperature: 0.5,
+                    systemPrompt: `You are MECHANIQS AI, a focused practical repair assistant. Vehicle context: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}. Job: ${selectedPart?.name || "unknown"}. Current step (${step + 1}/${GUIDE.length}): "${cur?.title}". Step notes: "${cur?.detail}". Gotcha: "${cur?.gotcha || "none"}". Give concise and safe guidance in plain text. Highlight safety-critical mistakes first. If uncertain, say what to verify before proceeding.`,
                     messages: newMsgs,
                 }),
             })
             const data = await res.json()
-            setMsgs([...newMsgs, { role: "assistant", content: data.content?.[0]?.text || "No response — try again." }])
+            const reply = res.ok ? (data.text || "No response — try again.") : (data.error || "AI request failed")
+            setMsgs([...newMsgs, { role: "assistant", content: reply }])
         } catch {
-            setMsgs([...newMsgs, { role: "assistant", content: "Connection error. Check your network." }])
+            setMsgs([...newMsgs, { role: "assistant", content: "Connection error. Check your network and OPENROUTER_API_KEY." }])
         }
         setLoading(false)
+    }
+
+    const sendDiagnosis = async (text) => {
+        if (!text.trim() || diagnosisLoading) return
+
+        const newMsgs = [...diagnosisMsgs, { role: "user", content: text }]
+        setDiagnosisMsgs(newMsgs)
+        setDiagnosisInput("")
+        setDiagnosisLoading(true)
+
+        const vehicleLabel = `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}`
+
+        try {
+            const res = await fetch("/api/ai-chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: "openai/gpt-4o-mini",
+                    maxTokens: 500,
+                    temperature: 0.4,
+                    systemPrompt: `You are a vehicle diagnosis assistant for MECHANIQS. Vehicle: ${vehicleLabel}. Prioritize causes known for this platform and mileage (${vehicle.odometer || "unknown"} miles). Output plain text in this exact structure: 1) Most likely causes (top 3, ranked). 2) Why these fit these symptoms. 3) Next checks in safest order (start with no-tools checks). 4) Risk level if user keeps driving (Low/Medium/High). 5) What info you still need. Keep it practical and concise.`,
+                    messages: newMsgs,
+                }),
+            })
+
+            const data = await res.json()
+            const reply = res.ok ? (data.text || "No response.") : (data.error || "OpenRouter request failed")
+            setDiagnosisMsgs([...newMsgs, { role: "assistant", content: reply }])
+        } catch {
+            setDiagnosisMsgs([...newMsgs, { role: "assistant", content: "Connection error. Check your network and OPENROUTER_API_KEY." }])
+        }
+
+        setDiagnosisLoading(false)
     }
 
     const startRepair = async (part) => {
@@ -360,6 +402,26 @@ export default function MechanIqs() {
                 diffColor={DIFF_COLOR}
                 diffLabel={DIFF_LABEL}
                 startRepair={startRepair}
+            />
+        )
+    }
+
+    if (screen === "diagnosis") {
+        return (
+            <SymptomDiagnosisPage
+                G={G}
+                goHome={goHome}
+                vehicle={vehicle}
+                msgs={diagnosisMsgs}
+                loading={diagnosisLoading}
+                input={diagnosisInput}
+                setInput={setDiagnosisInput}
+                sendDiagnosis={sendDiagnosis}
+                chatEl={diagnosisChatEl}
+                clearDiagnosis={() => {
+                    setDiagnosisMsgs([])
+                    setDiagnosisInput("")
+                }}
             />
         )
     }
