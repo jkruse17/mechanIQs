@@ -294,6 +294,30 @@ export default function MechanIqs() {
         setMsgs(newMsgs)
         setInput("")
         setLoading(true)
+
+        const vehicleLabel = `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}`.trim() || "unknown vehicle"
+        const completedStepTitles = done
+            .filter(i => i >= 0 && i < activeGuide.length)
+            .map(i => activeGuide[i]?.title)
+            .filter(Boolean)
+
+        const systemPrompt = [
+            "You are MECHANIQS AI, a focused practical car repair assistant.",
+            "Use the user's selected workflow context exactly as provided.",
+            `Vehicle: ${vehicleLabel}.`,
+            `Selected repair: ${selectedPart?.name || "unknown repair"}.`,
+            `Current app page: ${screen}.`,
+            `Step progress: ${step + 1}/${activeGuide.length}.`,
+            `Current step title: \"${cur?.title || "unknown step"}\".`,
+            `Current step detail: \"${cur?.detail || "none"}\".`,
+            `Current safety gotcha: \"${cur?.gotcha || "none"}\".`,
+            `Completed steps: ${completedStepTitles.length ? completedStepTitles.join(" | ") : "none"}.`,
+            `Current category filter: ${catFilter}.`,
+            "Respond in plain text with concise, actionable guidance.",
+            "Lead with any safety-critical warning before instructions.",
+            "If uncertain, say what the user should verify first.",
+        ].join(" ")
+
         try {
             const res = await fetch("/api/ai-chat", {
                 method: "POST",
@@ -301,12 +325,10 @@ export default function MechanIqs() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    maxTokens: 450,
+                    model: "openai/gpt-4o-mini",
+                    maxTokens: 700,
                     temperature: 0.5,
-                    systemPrompt: `You are MECHANIQS AI, a focused practical repair assistant. Vehicle context: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}. Job: ${selectedPart?.name || "unknown"}. Current step (${step + 1}/${GUIDE.length}): "${cur?.title}". Step notes: "${cur?.detail}". Gotcha: "${cur?.gotcha || "none"}". Give concise and safe guidance in plain text. Highlight safety-critical mistakes first. If uncertain, say what to verify before proceeding.`,
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 1000,
-                    system: `You are MECHANIQS AI — a focused, practical car repair assistant. The user is working on a ${vehicle.year} ${vehicle.make} ${vehicle.model}. Current job: ${selectedPart?.name}. Current step (${step + 1}/${activeGuide.length}): "${cur?.title}". Step notes: "${cur?.detail}". Known gotcha: "${cur?.gotcha || "none"}". Be direct and concise — under 120 words unless a safety point demands more. No markdown bullets unless listing tools. Address safety first when relevant.`,
+                    systemPrompt,
                     messages: newMsgs,
                 }),
             })
