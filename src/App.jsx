@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import RecallPage from "./RecallPage.jsx"
+import Sidebar from "./components/Sidebar"
 import {
     DEFAULT_VEHICLE,
     DIFF_COLOR,
@@ -408,142 +409,156 @@ export default function MechanIqs() {
     const compatibleCategories = ["All", ...new Set(liveParts.map(p => p.cat))]
     const visibleCompatibleParts = catFilter === "All" ? liveParts : liveParts.filter(p => p.cat === catFilter)
 
-    if (screen === "selector") {
-        return (
-            <SelectorPage
-                G={G}
-                goHome={goHome}
-                editingVehicleKey={editingVehicleKey}
-                vehicle={vehicle}
-                setVehicle={setVehicle}
-                allMakes={allMakes}
-                modelsBySelection={modelsBySelection}
-                trimOptions={trimOptions}
-                useVin={useVin}
-                setUseVin={setUseVin}
-                vehicleError={vehicleError}
-                decodeVIN={decodeVIN}
-                loadVehicle={loadVehicle}
-                fetchingVehicles={fetchingVehicles}
-            />
-        )
+    const renderContent = () => {
+        if (screen === "selector") {
+            return (
+                <SelectorPage
+                    G={G}
+                    goHome={goHome}
+                    editingVehicleKey={editingVehicleKey}
+                    vehicle={vehicle}
+                    setVehicle={setVehicle}
+                    allMakes={allMakes}
+                    modelsBySelection={modelsBySelection}
+                    trimOptions={trimOptions}
+                    useVin={useVin}
+                    setUseVin={setUseVin}
+                    vehicleError={vehicleError}
+                    decodeVIN={decodeVIN}
+                    loadVehicle={loadVehicle}
+                    fetchingVehicles={fetchingVehicles}
+                />
+            )
+        }
+
+        if (screen === "hub") {
+            return <HubPage G={G} goHome={goHome} vehicle={vehicle} garage={garage} setScreen={setScreen} selectedPart={selectedPart} />
+        }
+
+        if (screen === "garage") {
+            return (
+                <GaragePage
+                    G={G}
+                    goHome={goHome}
+                    garage={garage}
+                    setScreen={setScreen}
+                    setVehicle={setVehicle}
+                    normalizeVehicle={normalizeVehicle}
+                    removeVehicleFromGarage={removeVehicleFromGarage}
+                    setUseVin={setUseVin}
+                    setEditingVehicleKey={setEditingVehicleKey}
+                />
+            )
+        }
+
+        if (screen === "maintenance") {
+            return <MaintenancePage G={G} goHome={goHome} vehicle={vehicle} maintenanceList={maintenanceList} setScreen={setScreen} />
+        }
+
+        if (screen === "recalls") {
+            return <RecallPage vehicle={vehicle} setScreen={setScreen} />
+        }
+
+        if (screen === "repairs") {
+            return (
+                <RepairsPage
+                    G={G}
+                    goHome={goHome}
+                    vehicle={vehicle}
+                    selectedPart={selectedPart}
+                    goToTutorial={goToTutorial}
+                    categories={repairCategories}
+                    catFilter={catFilter}
+                    setCatFilter={setCatFilter}
+                    visibleParts={visibleRepairParts}
+                    diffColor={DIFF_COLOR}
+                    diffLabel={DIFF_LABEL}
+                    partsLoading={partsLoading}
+                    chooseRepairAndShowCompatible={chooseRepairAndShowCompatible}
+                />
+            )
+        }
+
+        if (screen === "parts") {
+            return (
+                <PartsPage
+                    G={G}
+                    goHome={goHome}
+                    vehicle={vehicle}
+                    partsLoading={partsLoading}
+                    partsError={partsError}
+                    categories={compatibleCategories}
+                    catFilter={catFilter}
+                    setCatFilter={setCatFilter}
+                    visibleParts={visibleCompatibleParts}
+                    startRepair={startRepair}
+                    selectedPart={selectedPart}
+                    goToTutorial={goToTutorial}
+                    setScreen={setScreen}
+                />
+            )
+        }
+
+        if (screen === "diagnosis") {
+            return (
+                <SymptomDiagnosisPage
+                    G={G}
+                    goHome={goHome}
+                    vehicle={vehicle}
+                    msgs={diagnosisMsgs}
+                    loading={diagnosisLoading}
+                    input={diagnosisInput}
+                    setInput={setDiagnosisInput}
+                    sendDiagnosis={sendDiagnosis}
+                    chatEl={diagnosisChatEl}
+                    clearDiagnosis={() => {
+                        setDiagnosisMsgs([])
+                        setDiagnosisInput("")
+                    }}
+                    setScreen={setScreen}
+                />
+            )
+        }
+
+        if (screen === "obdLookup") {
+            return <OBDLookupPage G={G} goHome={goHome} setScreen={setScreen} />
+        }
+
+        if (screen === "repair" && selectedPart) {
+            return (
+                <RepairPage
+                    G={G}
+                    goHome={goHome}
+                    selectedPart={selectedPart}
+                    vehicle={vehicle}
+                    guide={activeGuide}
+                    step={step}
+                    done={done}
+                    setStep={setStep}
+                    completeStep={completeStep}
+                    setScreen={setScreen}
+                    msgs={msgs}
+                    loading={loading}
+                    sendAI={sendAI}
+                    input={input}
+                    setInput={setInput}
+                    chatEl={chatEl}
+                />
+            )
+        }
+
+        return null
     }
 
-    if (screen === "hub") {
-        return <HubPage G={G} goHome={goHome} vehicle={vehicle} garage={garage} setScreen={setScreen} selectedPart={selectedPart} />
-    }
+    const content = renderContent()
+    if (!content) return null
 
-    if (screen === "garage") {
-        return (
-            <GaragePage
-                G={G}
-                goHome={goHome}
-                garage={garage}
-                setScreen={setScreen}
-                setVehicle={setVehicle}
-                normalizeVehicle={normalizeVehicle}
-                removeVehicleFromGarage={removeVehicleFromGarage}
-                setUseVin={setUseVin}
-                setEditingVehicleKey={setEditingVehicleKey}
-            />
-        )
-    }
-
-    if (screen === "maintenance") {
-        return <MaintenancePage G={G} goHome={goHome} vehicle={vehicle} maintenanceList={maintenanceList} setScreen={setScreen} />
-    }
-
-    if (screen === "recalls") {
-        return <RecallPage vehicle={vehicle} onBack={() => setScreen("hub")} />
-    }
-
-    if (screen === "repairs") {
-        return (
-            <RepairsPage
-                G={G}
-                goHome={goHome}
-                vehicle={vehicle}
-                selectedPart={selectedPart}
-                goToTutorial={goToTutorial}
-                categories={repairCategories}
-                catFilter={catFilter}
-                setCatFilter={setCatFilter}
-                visibleParts={visibleRepairParts}
-                diffColor={DIFF_COLOR}
-                diffLabel={DIFF_LABEL}
-                partsLoading={partsLoading}
-                chooseRepairAndShowCompatible={chooseRepairAndShowCompatible}
-            />
-        )
-    }
-
-    if (screen === "parts") {
-        return (
-            <PartsPage
-                G={G}
-                goHome={goHome}
-                vehicle={vehicle}
-                partsLoading={partsLoading}
-                partsError={partsError}
-                categories={compatibleCategories}
-                catFilter={catFilter}
-                setCatFilter={setCatFilter}
-                visibleParts={visibleCompatibleParts}
-                startRepair={startRepair}
-                selectedPart={selectedPart}
-                goToTutorial={goToTutorial}
-                setScreen={setScreen}
-            />
-        )
-    }
-
-    if (screen === "diagnosis") {
-        return (
-            <SymptomDiagnosisPage
-                G={G}
-                goHome={goHome}
-                vehicle={vehicle}
-                msgs={diagnosisMsgs}
-                loading={diagnosisLoading}
-                input={diagnosisInput}
-                setInput={setDiagnosisInput}
-                sendDiagnosis={sendDiagnosis}
-                chatEl={diagnosisChatEl}
-                clearDiagnosis={() => {
-                    setDiagnosisMsgs([])
-                    setDiagnosisInput("")
-                }}
-                setScreen={setScreen}
-            />
-        )
-    }
-
-    if (screen === "obdLookup") {
-        return <OBDLookupPage G={G} goHome={goHome} setScreen={setScreen} />
-    }
-
-    if (screen === "repair" && selectedPart) {
-        return (
-            <RepairPage
-                G={G}
-                goHome={goHome}
-                selectedPart={selectedPart}
-                vehicle={vehicle}
-                guide={activeGuide}
-                step={step}
-                done={done}
-                setStep={setStep}
-                completeStep={completeStep}
-                setScreen={setScreen}
-                msgs={msgs}
-                loading={loading}
-                sendAI={sendAI}
-                input={input}
-                setInput={setInput}
-                chatEl={chatEl}
-            />
-        )
-    }
-
-    return null
+    return (
+        <div style={{ display: "flex", minHeight: "100vh", height: "100vh", background: "#0b0b0b", overflow: "hidden" }}>
+            <Sidebar screen={screen} setScreen={setScreen} vehicle={vehicle} selectedPart={selectedPart} G={G} />
+            <div style={{ flex: 1, overflow: "auto" }}>
+                {content}
+            </div>
+        </div>
+    )
 }

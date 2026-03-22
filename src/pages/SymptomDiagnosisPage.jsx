@@ -26,7 +26,6 @@ export default function SymptomDiagnosisPage({
 
             <div style={G.topbar}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <button onClick={() => setScreen("hub")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Dashboard</button>
                     <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
                         <span style={G.logo}>MECHANIQS</span>
                     </button>

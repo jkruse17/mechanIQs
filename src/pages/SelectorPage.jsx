@@ -22,10 +22,10 @@ export default function SelectorPage({
             <style>{FONT_IMPORT_STYLE}</style>
             <div style={G.topbar}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <button onClick={goHome} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Dashboard</button>
                     <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
                         <span style={G.logo}>MECHANIQS</span>
                     </button>
+                    <span style={{ color: "#444", fontSize: "12px" }}>/ Add Vehicle</span>
                 </div>
                 <span style={{ fontSize: "11px", color: "#444", letterSpacing: "0.1em" }}>HACKATHON DEMO · 2025</span>
             </div>

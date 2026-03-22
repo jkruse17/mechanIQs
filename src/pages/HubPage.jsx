@@ -19,23 +19,26 @@ export default function HubPage({ G, goHome, vehicle, garage, setScreen, selecte
         <div style={G.app}>
             <style>{FONT_IMPORT_STYLE_NO_ITALIC}</style>
             <div style={G.topbar}>
-                <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
-                    <span style={G.logo}>MECHANIQS</span>
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                        <span style={G.logo}>MECHANIQS</span>
+                    </button>
+                    <span style={{ color: "#444", fontSize: "12px" }}>/ Dashboard</span>
+                </div>
                 {hasVehicle ? (
                     <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
                 ) : (
                     <span style={{ fontSize: "11px", color: "#555", letterSpacing: "0.08em" }}>NO VEHICLE LOADED</span>
                 )}
             </div>
-            <div style={{ maxWidth: "640px", margin: "0 auto", padding: "36px 20px" }}>
+            <div style={{ maxWidth: "960px", margin: "0 auto", padding: "36px 20px" }}>
                 <div style={{ marginBottom: "32px" }}>
                     <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>{hasVehicle ? "VEHICLE LOADED" : "DASHBOARD"}</div>
                     <h2 style={{ fontSize: "26px", fontWeight: "700" }}>
                         {hasVehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}` : "Load a vehicle to unlock maintenance and parts"}
                     </h2>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
                     {tiles.map(t => (
                         <div
                             key={t.label}

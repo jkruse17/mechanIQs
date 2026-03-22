@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 
 const NHTSA_BASE = "https://api.nhtsa.gov/recalls"
 
-export default function RecallPage({ vehicle, onBack }) {
+export default function RecallPage({ vehicle, setScreen }) {
     const [recalls, setRecalls] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
@@ -36,9 +36,9 @@ export default function RecallPage({ vehicle, onBack }) {
 
     const G = {
         app: { minHeight: "100vh", background: "#0b0b0b", color: "#ede9e1", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", fontSize: "14px" },
-        topbar: { height: "48px", borderBottom: "1px solid #222", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
-        logo: { fontWeight: "700", fontSize: "16px", letterSpacing: "0.06em", color: "#e8890c" },
-        ghost: { background: "none", border: "1px solid #2a2a2a", color: "#666", padding: "5px 12px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit", fontSize: "12px", letterSpacing: "0.04em" },
+        topbar: { height: "96px", borderBottom: "1px solid #222", padding: "0 40px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
+        logo: { fontWeight: "700", fontSize: "32px", letterSpacing: "0.06em", color: "#e8890c" },
+        ghost: { background: "none", border: "1px solid #2a2a2a", color: "#666", padding: "10px 24px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit", fontSize: "24px", letterSpacing: "0.04em" },
         btn: (color = "#e8890c") => ({ background: color, border: "none", color: "#0b0b0b", padding: "10px 22px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit", fontWeight: "700", fontSize: "12px", letterSpacing: "0.06em" }),
     }
 
@@ -47,11 +47,9 @@ export default function RecallPage({ vehicle, onBack }) {
             <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
             <div style={G.topbar}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <button onClick={onBack} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Dashboard</button>
                     <span style={G.logo}>MECHANIQS</span>
                     <span style={{ color: "#444", fontSize: "12px" }}>/ Recalls</span>
                 </div>
-                <span style={{ fontSize: "11px", color: "#555", letterSpacing: "0.08em" }}>ACTIVE RECALLS</span>
             </div>
             <div style={{ maxWidth: "760px", margin: "0 auto", padding: "36px 20px" }}>
                 <div style={{ marginBottom: "32px" }}>
