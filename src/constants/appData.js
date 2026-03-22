@@ -111,6 +111,8 @@ export const DIFF_COLOR = ["", "#4a9", "#e8a020", "#e04444"]
 export const DEFAULT_VEHICLE = { year: "", make: "", model: "", trim: "", odometer: "", vin: "" }
 export const GARAGE_STORAGE_KEY = "mechaniqs.garage.v1"
 export const LAST_VEHICLE_STORAGE_KEY = "mechaniqs.lastVehicle.v1"
+export const LAST_SELECTED_PART_STORAGE_KEY = "mechaniqs.lastSelectedPart.v1"
+export const LAST_CATEGORY_FILTER_STORAGE_KEY = "mechaniqs.lastCategoryFilter.v1"
 
 export const FONT_IMPORT_STYLE = "@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }"
 export const FONT_IMPORT_STYLE_NO_ITALIC = "@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }"

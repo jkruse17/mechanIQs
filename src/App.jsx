@@ -6,7 +6,9 @@ import {
     FALLBACK_MAKES,
     GARAGE_STORAGE_KEY,
     GUIDE,
+    LAST_CATEGORY_FILTER_STORAGE_KEY,
     LAST_VEHICLE_STORAGE_KEY,
+    LAST_SELECTED_PART_STORAGE_KEY,
     MAINTENANCE,
     NHTSA_BASE,
     PARTS,
@@ -14,6 +16,7 @@ import {
 } from "./constants/appData"
 import { readStorage, writeStorage } from "./utils/storage"
 import { computeTrimOptions, getVehicleKey, normalizeVehicle } from "./utils/vehicle"
+import { buildGuideForPart } from "./utils/guideBuilder"
 import { G } from "./styles/theme"
 import SelectorPage from "./pages/SelectorPage"
 import HubPage from "./pages/HubPage"
@@ -26,6 +29,7 @@ export default function MechanIqs() {
     const [screen, setScreen] = useState("hub")
     const [vehicle, setVehicle] = useState(DEFAULT_VEHICLE)
     const [selectedPart, setSelectedPart] = useState(null)
+    const [activeGuide, setActiveGuide] = useState(GUIDE)
     const [step, setStep] = useState(0)
     const [done, setDone] = useState([])
     const [msgs, setMsgs] = useState([])
@@ -100,13 +104,10 @@ export default function MechanIqs() {
 
     const goHome = () => {
         setScreen("hub")
-        setVehicle(DEFAULT_VEHICLE)
-        setSelectedPart(null)
         setStep(0)
         setDone([])
         setMsgs([])
         setInput("")
-        setCatFilter("All")
         setModelsBySelection([])
         setVehicleError("")
         setUseVin(false)
@@ -123,6 +124,16 @@ export default function MechanIqs() {
             const normalized = normalizeVehicle(parsedLastVehicle)
             if (normalized.year && normalized.make && normalized.model) setVehicle(normalized)
         }
+
+        const parsedSelectedPart = readStorage(LAST_SELECTED_PART_STORAGE_KEY, null)
+        if (parsedSelectedPart && typeof parsedSelectedPart === "object" && parsedSelectedPart.name) {
+            setSelectedPart(parsedSelectedPart)
+        }
+
+        const parsedCategory = readStorage(LAST_CATEGORY_FILTER_STORAGE_KEY, "All")
+        if (typeof parsedCategory === "string" && parsedCategory) {
+            setCatFilter(parsedCategory)
+        }
     }, [])
 
     useEffect(() => {
@@ -134,6 +145,27 @@ export default function MechanIqs() {
             writeStorage(LAST_VEHICLE_STORAGE_KEY, normalizeVehicle(vehicle))
         }
     }, [vehicle])
+
+    useEffect(() => {
+        if (selectedPart) {
+            setActiveGuide(buildGuideForPart(selectedPart, vehicle))
+        } else {
+            setActiveGuide(GUIDE)
+        }
+    }, [selectedPart, vehicle.year, vehicle.make, vehicle.model, vehicle.trim])
+
+    useEffect(() => {
+        setStep(s => Math.min(s, Math.max(activeGuide.length - 1, 0)))
+        setDone(d => d.filter(i => i < activeGuide.length))
+    }, [activeGuide.length])
+
+    useEffect(() => {
+        writeStorage(LAST_SELECTED_PART_STORAGE_KEY, selectedPart || null)
+    }, [selectedPart])
+
+    useEffect(() => {
+        writeStorage(LAST_CATEGORY_FILTER_STORAGE_KEY, catFilter)
+    }, [catFilter])
 
     useEffect(() => {
         if (chatEl.current) chatEl.current.scrollTop = chatEl.current.scrollHeight
@@ -244,7 +276,7 @@ export default function MechanIqs() {
 
     const sendAI = async (text) => {
         if (!text.trim() || loading) return
-        const cur = GUIDE[step]
+        const cur = activeGuide[step]
         const newMsgs = [...msgs, { role: "user", content: text }]
         setMsgs(newMsgs)
         setInput("")
@@ -260,7 +292,7 @@ export default function MechanIqs() {
                 body: JSON.stringify({
                     model: "claude-sonnet-4-20250514",
                     max_tokens: 1000,
-                    system: `You are MECHANIQS AI — a focused, practical car repair assistant. The user is working on a ${vehicle.year} ${vehicle.make} ${vehicle.model}. Current job: ${selectedPart?.name}. Current step (${step + 1}/${GUIDE.length}): "${cur?.title}". Step notes: "${cur?.detail}". Known gotcha: "${cur?.gotcha || "none"}". Be direct and concise — under 120 words unless a safety point demands more. No markdown bullets unless listing tools. Address safety first when relevant.`,
+                    system: `You are MECHANIQS AI — a focused, practical car repair assistant. The user is working on a ${vehicle.year} ${vehicle.make} ${vehicle.model}. Current job: ${selectedPart?.name}. Current step (${step + 1}/${activeGuide.length}): "${cur?.title}". Step notes: "${cur?.detail}". Known gotcha: "${cur?.gotcha || "none"}". Be direct and concise — under 120 words unless a safety point demands more. No markdown bullets unless listing tools. Address safety first when relevant.`,
                     messages: newMsgs,
                 }),
             })
@@ -274,6 +306,7 @@ export default function MechanIqs() {
 
     const startRepair = async (part) => {
         await fetchLiveParts(part.name)
+        setActiveGuide(buildGuideForPart(part, vehicle))
         setSelectedPart(part)
         setStep(0)
         setDone([])
@@ -284,9 +317,24 @@ export default function MechanIqs() {
         setScreen("repair")
     }
 
+    const choosePartOnly = (part) => {
+        setActiveGuide(buildGuideForPart(part, vehicle))
+        setSelectedPart(part)
+        setStep(0)
+        setDone([])
+        setMsgs([{
+            role: "assistant",
+            content: `Part selected: ${part.name}. Open Tutorial when ready and I will guide you step by step for your ${vehicle.year} ${vehicle.make} ${vehicle.model}.`,
+        }])
+    }
+
+    const goToTutorial = () => {
+        if (selectedPart) setScreen("repair")
+    }
+
     const completeStep = () => {
         setDone(d => [...d, step])
-        if (step < GUIDE.length - 1) setStep(s => s + 1)
+        if (step < activeGuide.length - 1) setStep(s => s + 1)
     }
 
     const odometer = parseInt(vehicle.odometer) || 0
@@ -322,7 +370,7 @@ export default function MechanIqs() {
     }
 
     if (screen === "hub") {
-        return <HubPage G={G} goHome={goHome} vehicle={vehicle} garage={garage} setScreen={setScreen} />
+        return <HubPage G={G} goHome={goHome} vehicle={vehicle} garage={garage} setScreen={setScreen} selectedPart={selectedPart} />
     }
 
     if (screen === "garage") {
@@ -360,6 +408,9 @@ export default function MechanIqs() {
                 diffColor={DIFF_COLOR}
                 diffLabel={DIFF_LABEL}
                 startRepair={startRepair}
+                selectedPart={selectedPart}
+                choosePartOnly={choosePartOnly}
+                goToTutorial={goToTutorial}
             />
         )
     }
@@ -371,7 +422,7 @@ export default function MechanIqs() {
                 goHome={goHome}
                 selectedPart={selectedPart}
                 vehicle={vehicle}
-                guide={GUIDE}
+                guide={activeGuide}
                 step={step}
                 done={done}
                 setStep={setStep}

@@ -1,11 +1,13 @@
 import { FONT_IMPORT_STYLE_NO_ITALIC } from "../constants/appData"
 
-export default function HubPage({ G, goHome, vehicle, garage, setScreen }) {
+export default function HubPage({ G, goHome, vehicle, garage, setScreen, selectedPart }) {
     const hasVehicle = Boolean(vehicle.year && vehicle.make && vehicle.model)
+    const hasTutorial = Boolean(selectedPart)
     const tiles = [
         { icon: "＋", label: "Add Vehicle", sub: "Load by VIN or manual selection", action: () => setScreen("selector"), live: true },
         { icon: "▣", label: "Garage", sub: `${garage.length} saved vehicle${garage.length === 1 ? "" : "s"}`, action: () => setScreen("garage"), live: true },
         { icon: "⬡", label: "Parts Catalog", sub: "OEM vs aftermarket with fitment", action: () => setScreen("parts"), live: hasVehicle },
+        { icon: "▸", label: "Tutorial", sub: hasTutorial ? `Resume ${selectedPart.name}` : "Pick a part first to start tutorial", action: () => setScreen("repair"), live: hasTutorial, badge: hasTutorial ? null : "LOCKED" },
         { icon: "◈", label: "AI Symptom Diagnosis", sub: "Describe it — get ranked causes", action: null, live: false },
         { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: () => setScreen("maintenance"), live: hasVehicle },
         { icon: "⚑", label: "OBD-II Code Lookup", sub: "Paste a fault code for plain English", action: null, live: false },
@@ -40,7 +42,7 @@ export default function HubPage({ G, goHome, vehicle, garage, setScreen }) {
                             onMouseEnter={e => t.live && (e.currentTarget.style.borderColor = "#e8890c")}
                             onMouseLeave={e => e.currentTarget.style.borderColor = t.live ? "#2a2a2a" : "#181818"}
                         >
-                            {!t.live && <span style={{ position: "absolute", top: "10px", right: "12px", fontSize: "9px", color: "#444", letterSpacing: "0.1em" }}>COMING SOON</span>}
+                            {!t.live && <span style={{ position: "absolute", top: "10px", right: "12px", fontSize: "9px", color: "#444", letterSpacing: "0.1em" }}>{t.badge || "COMING SOON"}</span>}
                             <div style={{ fontSize: "22px", marginBottom: "12px", color: t.live ? "#e8890c" : "#333" }}>{t.icon}</div>
                             <div style={{ fontWeight: "700", fontSize: "13px", marginBottom: "5px", color: t.live ? "#ede9e1" : "#444" }}>{t.label}</div>
                             <div style={{ color: t.live ? "#666" : "#333", fontSize: "12px", lineHeight: "1.5" }}>{t.sub}</div>

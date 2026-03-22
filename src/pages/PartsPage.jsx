@@ -1,6 +1,6 @@
 import { FONT_IMPORT_STYLE_NO_ITALIC } from "../constants/appData"
 
-export default function PartsPage({ G, goHome, vehicle, partsLoading, partsError, categories, catFilter, setCatFilter, visibleParts, diffColor, diffLabel, startRepair }) {
+export default function PartsPage({ G, goHome, vehicle, partsLoading, partsError, categories, catFilter, setCatFilter, visibleParts, diffColor, diffLabel, startRepair, selectedPart, choosePartOnly, goToTutorial }) {
     return (
         <div style={G.app}>
             <style>{FONT_IMPORT_STYLE_NO_ITALIC}</style>
@@ -17,6 +17,12 @@ export default function PartsPage({ G, goHome, vehicle, partsLoading, partsError
                 <div style={{ marginBottom: "20px" }}>
                     <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "4px" }}>{vehicle.year} {vehicle.make} {vehicle.model}</div>
                     <h2 style={{ fontSize: "20px", fontWeight: "700" }}>COMPATIBLE PARTS</h2>
+                    {selectedPart && (
+                        <div style={{ marginTop: "10px", padding: "10px 12px", border: "1px solid #2a2a2a", borderRadius: "3px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", background: "#111" }}>
+                            <span style={{ color: "#888", fontSize: "12px" }}>Selected: <span style={{ color: "#ede9e1" }}>{selectedPart.name}</span></span>
+                            <button onClick={goToTutorial} style={G.btn("#4a9")}>GO TO TUTORIAL →</button>
+                        </div>
+                    )}
                     {partsLoading && (
                         <p style={{ color: "#888", fontSize: "12px", marginTop: "10px" }}>Loading selected part options from RockAuto...</p>
                     )}
@@ -60,7 +66,9 @@ export default function PartsPage({ G, goHome, vehicle, partsLoading, partsError
                                         {partsLoading ? "LOADING..." : "START REPAIR"}
                                     </button>
                                 ) : (
-                                    <button disabled style={{ ...G.btn("#1e1e1e"), color: "#444", cursor: "not-allowed" }}>GUIDE SOON</button>
+                                    <button onClick={() => choosePartOnly(p)} style={selectedPart?.id === p.id ? G.btn("#4a9") : G.btn("#303030")}>
+                                        {selectedPart?.id === p.id ? "SELECTED" : "SELECT PART"}
+                                    </button>
                                 )}
                             </div>
                         </div>
