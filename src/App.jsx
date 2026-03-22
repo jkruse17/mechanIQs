@@ -476,14 +476,14 @@ export default function MechanIqs() {
                     {/* Quick demo tile */}
                     <div
                         onClick={() => {
-                            setVehicle(x => ({ ...x, year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000", vin: "" }))
+                            setVehicle(x => ({ ...x, year: "2026", make: "Honda", model: "Civic", trim: "Sport", odometer: "45000", vin: "" }))
                             setScreen("maintenance")
                         }}
-                        onClick={() => loadVehicle({ year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000" }, "hub")}
+                        onClick={() => loadVehicle({ year: "2026", make: "Honda", model: "Civic", trim: "Sport", odometer: "45000" }, "hub")}
                         style={{ border: "1px solid #e8890c", borderRadius: "4px", padding: "14px 18px", marginBottom: "28px", cursor: "pointer", background: "#0f0a00" }}
                     >
                         <div style={{ fontSize: "10px", color: "#e8890c", letterSpacing: "0.14em", marginBottom: "6px" }}>⚡  QUICK START — DEMO VEHICLE</div>
-                        <div style={{ fontSize: "16px", fontWeight: "700", marginBottom: "4px" }}>2026 Honda Civic Sport Hybrid</div>
+                        <div style={{ fontSize: "16px", fontWeight: "700", marginBottom: "4px" }}>2026 Honda Civic Sport</div>
                         <div style={{ fontSize: "12px", color: "#555" }}>Skip selector and explore all features →</div>
                     </div>
 
