@@ -1,9 +1,41 @@
 import { useState, useEffect, useRef } from "react"
-import spinningWrench from "./spinning wrench.gif"
 
 const NHTSA_BASE = "https://vpic.nhtsa.dot.gov/api/vehicles"
 const YEARS = Array.from({ length: 2026 - 1980 + 1 }, (_, i) => String(2026 - i))
-const FALLBACK_MAKES = ["Honda","Toyota","Ford","Chevrolet","BMW","Subaru","Mazda","Nissan","Hyundai","Kia","Mercedes-Benz","Audi","Volkswagen","Jeep","GMC","Lexus","Dodge","Chrysler","Ram","Volvo","Porsche","Jaguar","Land Rover","Mitsubishi","Tesla","Buick","Cadillac","Infiniti","Acura","Mini","Alfa Romeo","Maserati","Ferrari","Lamborghini","Genesis","Lincoln","Daihatsu","Saab","Peugeot","Renault","Citroën","Fiat","Suzuki","Isuzu","Scion","Pontiac","Saturn","Oldsmobile","Mercury","AMC","Packard","Studebaker","DeLorean"]
+const TOP_MAKES = [
+    "Acura", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "Buick", "Cadillac", "Chevrolet", "Chrysler", "Citroën", "Dodge", "Daimler", "Ferrari", "Fiat", "Ford", "Genesis", "GMC", "Honda", "Hyundai", "Infiniti", "Isuzu", "Jaguar", "Jeep", "Kia", "Koenigsegg", "Lamborghini", "Land Rover", "Lexus", "Lincoln", "Lotus", "Lucid", "Maserati", "Mazda", "McLaren", "Mercedes-Benz", "Mini", "Mitsubishi", "Nissan", "Pagani", "Peugeot", "Porsche", "Renault", "Rolls-Royce", "Saab", "Seat", "Skoda", "Smart", "Subaru", "Suzuki", "Tesla", "Toyota", "Vauxhall", "Volkswagen", "Volvo"
+]
+const FALLBACK_MAKES = TOP_MAKES
+
+const MODEL_TRIMS_BY_YEAR = {
+    "Lexus|IS": [
+        { minYear: 1999, maxYear: 2005, trims: ["IS-200", "IS-300"] },
+        { minYear: 2006, maxYear: 2013, trims: ["IS-250", "IS-350", "IS-F"] },
+        { minYear: 2014, maxYear: 2020, trims: ["IS-200t", "IS-300", "IS-350", "IS-F"] },
+        { minYear: 2021, maxYear: 2026, trims: ["IS 300", "IS 500"] },
+    ],
+    "Honda|Civic": [
+        { minYear: 2006, maxYear: 2011, trims: ["DX", "LX", "EX"] },
+        { minYear: 2012, maxYear: 2022, trims: ["LX", "EX", "Sport"] },
+        { minYear: 2025, maxYear: 2026, trims: ["LX", "Sport", "Sport Hybrid", "Sport Touring Hybrid"] },
+    ],
+    "Ford|F-150": [
+        { minYear: 2009, maxYear: 2022, trims: ["XL", "XLT", "Lariat", "King Ranch", "Platinum", "Limited"] },
+    ],
+}
+
+/**
+ * MODEL_TRIMS IS COCONUT JPG DO NOT DELETE OR ENTIRE WEBSITE WILL SELF DETONATE
+ * MODEL_TRIMS IS COCONUT JPG DO NOT DELETE OR ENTIRE WEBSITE WILL SELF DETONATE
+ * MODEL_TRIMS IS COCONUT JPG DO NOT DELETE OR ENTIRE WEBSITE WILL SELF DETONATE
+ */
+const MODEL_TRIMS = {
+    "Lexus|IS": ["IS-200", "IS-300", "IS-350", "IS-500", "IS-F"],
+    "Toyota|Camry": ["LE", "SE", "XLE", "XSE", "TRD"],
+    "Honda|Civic": ["LX", "EX", "Sport", "Si", "Type R"],
+    "Ford|F-150": ["XL", "STX", "XLT", "Lariat", "King Ranch", "Limited", "Tremor", "Raptor"],
+    "BMW|3 Series": ["320i", "330i", "340i", "M3"],
+}
 
 const PARTS = [
     { id: 1, name: "Front Brake Pads", cat: "Brakes", diff: 2, time: "1.5 hrs", oem: 85, am: 35, csat: 87, hasGuide: true },
@@ -81,10 +113,48 @@ const MAINTENANCE = [
 
 const DIFF_LABEL = ["", "Easy", "Moderate", "Hard"]
 const DIFF_COLOR = ["", "#4a9", "#e8a020", "#e04444"]
+const DEFAULT_VEHICLE = { year: "", make: "", model: "", trim: "", odometer: "", vin: "" }
+const GARAGE_STORAGE_KEY = "mechaniqs.garage.v1"
+const LAST_VEHICLE_STORAGE_KEY = "mechaniqs.lastVehicle.v1"
+
+const normalizeVehicle = (v = {}) => ({
+    year: String(v.year || "").trim(),
+    make: String(v.make || "").trim(),
+    model: String(v.model || "").trim(),
+    trim: String(v.trim || "").trim(),
+    odometer: String(v.odometer || "").trim(),
+    vin: String(v.vin || "").trim().toUpperCase(),
+})
+
+const getVehicleKey = (v = {}) => {
+    const n = normalizeVehicle(v)
+    if (n.vin && n.vin.length === 17) return `VIN:${n.vin}`
+    return `YMMT:${n.year}|${n.make}|${n.model}|${n.trim}`.toUpperCase()
+}
+
+const readStorage = (key, fallback) => {
+    try {
+        const raw = localStorage.getItem(key)
+        return raw ? JSON.parse(raw) : fallback
+    } catch (err) {
+        console.error(`Storage read failed for ${key}`, err)
+        return fallback
+    }
+}
+
+const writeStorage = (key, value) => {
+    try {
+        localStorage.setItem(key, JSON.stringify(value))
+        return true
+    } catch (err) {
+        console.error(`Storage write failed for ${key}`, err)
+        return false
+    }
+}
 
 export default function MechanIqs() {
-    const [screen, setScreen] = useState("selector")
-    const [vehicle, setVehicle] = useState({ year: "", make: "", model: "", trim: "", odometer: "", vin: "" })
+    const [screen, setScreen] = useState("hub")
+    const [vehicle, setVehicle] = useState(DEFAULT_VEHICLE)
     const [selectedPart, setSelectedPart] = useState(null)
     const [step, setStep] = useState(0)
     const [done, setDone] = useState([])
@@ -94,40 +164,119 @@ export default function MechanIqs() {
     const [catFilter, setCatFilter] = useState("All")
     const [allMakes, setAllMakes] = useState(FALLBACK_MAKES)
     const [modelsBySelection, setModelsBySelection] = useState([])
+    const [trimOptions, setTrimOptions] = useState([])
     const [fetchingVehicles, setFetchingVehicles] = useState(false)
     const [vehicleError, setVehicleError] = useState("")
     const [useVin, setUseVin] = useState(false)
     const [liveParts, setLiveParts] = useState([])
     const [partsLoading, setPartsLoading] = useState(false)
     const [partsError, setPartsError] = useState("")
+    const [garage, setGarage] = useState([])
+    const [editingVehicleKey, setEditingVehicleKey] = useState("")
     const chatEl = useRef(null)
+
+    const addVehicleToGarage = (v) => {
+        const normalized = normalizeVehicle(v)
+        if (!normalized.year || !normalized.make || !normalized.model) return
+        const key = getVehicleKey(normalized)
+        setGarage(prev => {
+            const next = [...prev]
+            const idx = next.findIndex(item => item.key === key)
+            const entry = { ...normalized, key, updatedAt: new Date().toISOString() }
+            if (idx >= 0) next[idx] = { ...next[idx], ...entry }
+            else next.unshift(entry)
+            writeStorage(GARAGE_STORAGE_KEY, next)
+            return next
+        })
+    }
+
+    const loadVehicle = (v, nextScreen = "hub") => {
+        const normalized = normalizeVehicle(v)
+        const nextKey = getVehicleKey(normalized)
+
+        if (editingVehicleKey && editingVehicleKey !== nextKey) {
+            setGarage(prev => {
+                const next = prev.filter(item => item.key !== editingVehicleKey)
+                writeStorage(GARAGE_STORAGE_KEY, next)
+                return next
+            })
+        }
+
+        setVehicle(normalized)
+        writeStorage(LAST_VEHICLE_STORAGE_KEY, normalized)
+        addVehicleToGarage(normalized)
+        setEditingVehicleKey("")
+        setScreen(nextScreen)
+    }
+
+    const removeVehicleFromGarage = (key) => {
+        setGarage(prev => {
+            const next = prev.filter(item => item.key !== key)
+            writeStorage(GARAGE_STORAGE_KEY, next)
+            return next
+        })
+
+        if (getVehicleKey(vehicle) === key) {
+            setVehicle(DEFAULT_VEHICLE)
+            try {
+                localStorage.removeItem(LAST_VEHICLE_STORAGE_KEY)
+            } catch (err) {
+                console.error("Failed to clear last vehicle from storage", err)
+            }
+        }
+
+        if (editingVehicleKey === key) {
+            setEditingVehicleKey("")
+        }
+    }
+
+    const goHome = () => {
+        setScreen("hub")
+        setVehicle(DEFAULT_VEHICLE)
+        setSelectedPart(null)
+        setStep(0)
+        setDone([])
+        setMsgs([])
+        setInput("")
+        setCatFilter("All")
+        setModelsBySelection([])
+        setVehicleError("")
+        setUseVin(false)
+        setEditingVehicleKey("")
+    }
+
+    useEffect(() => {
+        const parsedGarage = readStorage(GARAGE_STORAGE_KEY, [])
+        if (Array.isArray(parsedGarage)) {
+            setGarage(parsedGarage)
+        } else if (parsedGarage && typeof parsedGarage === "object") {
+            setGarage(Object.values(parsedGarage))
+        }
+
+        const parsedLastVehicle = readStorage(LAST_VEHICLE_STORAGE_KEY, null)
+        if (parsedLastVehicle) {
+            const normalized = normalizeVehicle(parsedLastVehicle)
+            if (normalized.year && normalized.make && normalized.model) setVehicle(normalized)
+        }
+    }, [])
+
+    useEffect(() => {
+        writeStorage(GARAGE_STORAGE_KEY, garage)
+    }, [garage])
+
+    useEffect(() => {
+        if (vehicle.year && vehicle.make && vehicle.model) {
+            writeStorage(LAST_VEHICLE_STORAGE_KEY, normalizeVehicle(vehicle))
+        }
+    }, [vehicle])
 
     useEffect(() => {
         if (chatEl.current) chatEl.current.scrollTop = chatEl.current.scrollHeight
     }, [msgs])
 
     useEffect(() => {
-        const init = async () => {
-            setFetchingVehicles(true)
-            setVehicleError("")
-            try {
-                const res = await fetch(`${NHTSA_BASE}/GetAllMakes?format=json`)
-                if (!res.ok) throw new Error(`HTTP ${res.status}`)
-                const data = await res.json()
-                const sorted = (data.Results || [])
-                    .map(item => item.Make_Name?.trim())
-                    .filter(Boolean)
-                    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-                setAllMakes(sorted.length ? sorted : FALLBACK_MAKES)
-            } catch (err) {
-                console.error("NHTSA make fetch failed", err)
-                setVehicleError("Cannot fetch makes; using fallback list. Check network or CORS.")
-                setAllMakes(FALLBACK_MAKES)
-            } finally {
-                setFetchingVehicles(false)
-            }
-        }
-        init()
+        // Use strict curated automaker list only (manual top OEMs), do not allow third-party vendor names from API.
+        setAllMakes(TOP_MAKES)
     }, [])
 
     useEffect(() => {
@@ -186,6 +335,25 @@ export default function MechanIqs() {
         }
     }
 
+    const year = Number(vehicle.year)
+
+    const computeTrimOptions = (make, model, year) => {
+        const key = `${make}|${model}`
+        const yearBuckets = MODEL_TRIMS_BY_YEAR[key] || []
+        const bucket = yearBuckets.find(b => year >= b.minYear && year <= b.maxYear)
+        if (bucket) return bucket.trims
+        // fallback to generic trim list for the same model if year-specific missing
+        return MODEL_TRIMS[key] || []
+    }
+
+    useEffect(() => {
+        const options = computeTrimOptions(vehicle.make, vehicle.model, year)
+        setTrimOptions(options)
+        if (options.length && !options.includes(vehicle.trim)) {
+            setVehicle(x => ({ ...x, trim: "" }))
+        }
+    }, [vehicle.make, vehicle.model, vehicle.year])
+
     const decodeVIN = async () => {
         if (!vehicle.vin || vehicle.vin.length !== 17) {
             setVehicleError("VIN must be 17 characters")
@@ -197,12 +365,19 @@ export default function MechanIqs() {
             const res = await fetch(`${NHTSA_BASE}/DecodeVin/${vehicle.vin}?format=json`)
             const data = await res.json()
             const results = data.Results || []
-            const year = results.find(r => r.Variable === "Model Year")?.Value
-            const make = results.find(r => r.Variable === "Make")?.Value
+            let year = results.find(r => r.Variable === "Model Year")?.Value
+            let make = results.find(r => r.Variable === "Make")?.Value
             const model = results.find(r => r.Variable === "Model")?.Value
             const trim = results.find(r => r.Variable === "Trim")?.Value || ""
+            
+            // Normalize make to match TOP_MAKES (case-insensitive)
+            if (make) {
+                const matchedMake = TOP_MAKES.find(m => m.toLowerCase() === make.toLowerCase())
+                make = matchedMake || make
+            }
+            
             if (year && make && model) {
-                setVehicle(x => ({ ...x, year, make, model, trim }))
+                loadVehicle({ ...vehicle, year, make, model, trim }, "hub")
                 setUseVin(false) // switch to manual to show fields
             } else {
                 setVehicleError("Could not decode VIN")
@@ -270,6 +445,7 @@ export default function MechanIqs() {
         app: { minHeight: "100vh", background: "#0b0b0b", color: "#ede9e1", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", fontSize: "14px" },
         topbar: { height: "48px", borderBottom: "1px solid #222", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
         logo: { fontWeight: "700", fontSize: "16px", letterSpacing: "0.06em", color: "#e8890c" },
+        logoBtn: { background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" },
         ghost: { background: "none", border: "1px solid #2a2a2a", color: "#666", padding: "5px 12px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit", fontSize: "12px", letterSpacing: "0.04em" },
         pill: (active) => ({ background: active ? "#e8890c" : "#161616", border: `1px solid ${active ? "#e8890c" : "#2a2a2a"}`, color: active ? "#0b0b0b" : "#888", padding: "4px 12px", borderRadius: "20px", cursor: "pointer", fontFamily: "inherit", fontSize: "11px", fontWeight: active ? "700" : "400", letterSpacing: "0.05em" }),
         btn: (color = "#e8890c") => ({ background: color, border: "none", color: "#0b0b0b", padding: "10px 22px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit", fontWeight: "700", fontSize: "12px", letterSpacing: "0.06em" }),
@@ -285,18 +461,15 @@ export default function MechanIqs() {
             <div style={G.app}>
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
-                    <span style={G.logo}>MECHANIQS</span>
+                    <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                        <span style={G.logo}>MECHANIQS</span>
+                    </button>
                     <span style={{ fontSize: "11px", color: "#444", letterSpacing: "0.1em" }}>HACKATHON DEMO · 2025</span>
                 </div>
                 <div style={{ maxWidth: "520px", margin: "0 auto", padding: "48px 20px" }}>
                     <div style={{ marginBottom: "36px" }}>
-                        <img
-                            src={spinningWrench}
-                            alt="Spinning wrench"
-                            style={{ width: "56px", height: "56px", display: "block", marginBottom: "14px" }}
-                        />
                         <div style={{ fontSize: "11px", color: "#e8890c", letterSpacing: "0.14em", marginBottom: "10px" }}>VEHICLE-SPECIFIC CAR REPAIR</div>
-                        <h1 style={{ fontSize: "30px", fontWeight: "700", lineHeight: "1.2", marginBottom: "10px" }}>What are you<br />working on today?</h1>
+                        <h1 style={{ fontSize: "30px", fontWeight: "700", lineHeight: "1.2", marginBottom: "10px" }}>{editingVehicleKey ? "Edit your vehicle" : "What are you"}<br />{editingVehicleKey ? "and save changes" : "working on today?"}</h1>
                         <p style={{ color: "#666", fontSize: "13px", lineHeight: "1.6" }}>Select your vehicle to get guided repairs, part pricing, and an AI assistant that knows your exact car.</p>
                     </div>
 
@@ -306,6 +479,7 @@ export default function MechanIqs() {
                             setVehicle(x => ({ ...x, year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000", vin: "" }))
                             setScreen("maintenance")
                         }}
+                        onClick={() => loadVehicle({ year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000" }, "hub")}
                         style={{ border: "1px solid #e8890c", borderRadius: "4px", padding: "14px 18px", marginBottom: "28px", cursor: "pointer", background: "#0f0a00" }}
                     >
                         <div style={{ fontSize: "10px", color: "#e8890c", letterSpacing: "0.14em", marginBottom: "6px" }}>⚡  QUICK START — DEMO VEHICLE</div>
@@ -359,13 +533,25 @@ export default function MechanIqs() {
                             ))}
                             <div>
                                 <label style={{ display: "block", fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>TRIM</label>
-                                <input
-                                    value={vehicle.trim}
-                                    placeholder="e.g. LX, EX, Touring"
-                                    disabled={!vehicle.model}
-                                    onChange={e => setVehicle(x => ({ ...x, trim: e.target.value }))}
-                                    style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
-                                />
+                                {trimOptions.length > 0 ? (
+                                    <select
+                                        value={vehicle.trim}
+                                        disabled={!vehicle.model}
+                                        onChange={e => setVehicle(x => ({ ...x, trim: e.target.value }))}
+                                        style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
+                                    >
+                                        <option value="">—</option>
+                                        {trimOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    </select>
+                                ) : (
+                                    <input
+                                        value={vehicle.trim}
+                                        placeholder="e.g. LX, EX, Touring"
+                                        disabled={!vehicle.model}
+                                        onChange={e => setVehicle(x => ({ ...x, trim: e.target.value }))}
+                                        style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "8px 10px", borderRadius: "3px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
+                                    />
+                                )}
                             </div>
                         </div>
                     )}
@@ -385,10 +571,10 @@ export default function MechanIqs() {
 
                     <button
                         disabled={useVin ? !vehicle.vin : !ready}
-                        onClick={useVin ? decodeVIN : () => setScreen("maintenance")}
+                        onClick={useVin ? decodeVIN : () => loadVehicle(vehicle, "hub")}
                         style={{ ...G.btn(useVin ? vehicle.vin : ready ? "#e8890c" : "#1e1e1e"), color: useVin ? (vehicle.vin ? "#0b0b0b" : "#444") : (ready ? "#0b0b0b" : "#444"), cursor: useVin ? (vehicle.vin ? "pointer" : "not-allowed") : (ready ? "pointer" : "not-allowed"), width: "100%", padding: "13px" }}
                     >
-                        {useVin ? "DECODE VIN →" : "GET MAINTENANCE →"}
+                        {useVin ? "DECODE VIN →" : "GO TO DASHBOARD →"}
                     </button>
                 </div>
             </div>
@@ -397,28 +583,34 @@ export default function MechanIqs() {
 
     // ─── HUB ───────────────────────────────────────────────────────
     if (screen === "hub") {
+        const hasVehicle = Boolean(vehicle.year && vehicle.make && vehicle.model)
         const tiles = [
-            { icon: "⬡", label: "Parts Catalog", sub: "OEM vs aftermarket with fitment", action: () => setScreen("parts"), live: true },
+            { icon: "＋", label: "Add Vehicle", sub: "Load by VIN or manual selection", action: () => setScreen("selector"), live: true },
+            { icon: "▣", label: "Garage", sub: `${garage.length} saved vehicle${garage.length === 1 ? "" : "s"}`, action: () => setScreen("garage"), live: true },
+            { icon: "⬡", label: "Parts Catalog", sub: "OEM vs aftermarket with fitment", action: () => setScreen("parts"), live: hasVehicle },
             { icon: "◈", label: "AI Symptom Diagnosis", sub: "Describe it — get ranked causes", action: null, live: false },
-            { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: () => setScreen("maintenance"), live: true },
+            { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: () => setScreen("maintenance"), live: hasVehicle },
             { icon: "⚑", label: "OBD-II Code Lookup", sub: "Paste a fault code for plain English", action: null, live: false },
         ]
         return (
             <div style={G.app}>
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <button onClick={() => setScreen("selector")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Back</button>
+                    <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
                         <span style={G.logo}>MECHANIQS</span>
-                    </div>
-                    <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
-                    <span style={G.logo}>MECHANIQS</span>
-                    <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
+                    </button>
+                    {hasVehicle ? (
+                        <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
+                    ) : (
+                        <span style={{ fontSize: "11px", color: "#555", letterSpacing: "0.08em" }}>NO VEHICLE LOADED</span>
+                    )}
                 </div>
                 <div style={{ maxWidth: "640px", margin: "0 auto", padding: "36px 20px" }}>
                     <div style={{ marginBottom: "32px" }}>
-                        <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>VEHICLE LOADED</div>
-                        <h2 style={{ fontSize: "26px", fontWeight: "700" }}>{vehicle.year} {vehicle.make} {vehicle.model}</h2>
+                        <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>{hasVehicle ? "VEHICLE LOADED" : "DASHBOARD"}</div>
+                        <h2 style={{ fontSize: "26px", fontWeight: "700" }}>
+                            {hasVehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}` : "Load a vehicle to unlock maintenance and parts"}
+                        </h2>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                         {tiles.map(t => (
@@ -441,6 +633,59 @@ export default function MechanIqs() {
         )
     }
 
+    // ─── GARAGE ──────────────────────────────────────────────────────
+    if (screen === "garage") {
+        return (
+            <div style={G.app}>
+                <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
+                <div style={G.topbar}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <button onClick={() => setScreen("hub")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Dashboard</button>
+                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                            <span style={G.logo}>MECHANIQS</span>
+                        </button>
+                    </div>
+                    <button onClick={() => setScreen("selector")} style={G.ghost}>ADD VEHICLE</button>
+                </div>
+
+                <div style={{ maxWidth: "760px", margin: "0 auto", padding: "36px 20px" }}>
+                    <div style={{ marginBottom: "20px" }}>
+                        <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>GARAGE</div>
+                        <h2 style={{ fontSize: "26px", fontWeight: "700", marginBottom: "8px" }}>Saved Vehicles</h2>
+                        <p style={{ color: "#666", fontSize: "13px", lineHeight: "1.6" }}>Vehicles loaded through VIN, manual selection, or demo are saved locally on this device.</p>
+                    </div>
+
+                    <div style={{ marginBottom: "16px", display: "flex", justifyContent: "flex-start" }}>
+                        <button onClick={() => { setEditingVehicleKey(""); setScreen("selector") }} style={G.btn()}>ADD VEHICLE →</button>
+                    </div>
+
+                    {garage.length === 0 ? (
+                        <div style={{ border: "1px solid #1e1e1e", borderRadius: "4px", background: "#0e0e0e", padding: "22px" }}>
+                            <div style={{ fontSize: "14px", marginBottom: "8px" }}>No saved vehicles yet.</div>
+                        </div>
+                    ) : (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                            {garage.map(item => (
+                                <div key={item.key} style={{ border: "1px solid #2a2a2a", borderRadius: "4px", padding: "16px", background: "#0e0e0e" }}>
+                                    <div style={{ fontSize: "17px", fontWeight: "700", marginBottom: "5px" }}>{item.year} {item.make} {item.model}{item.trim ? ` ${item.trim}` : ""}</div>
+                                    <div style={{ color: "#666", fontSize: "12px", marginBottom: "10px" }}>
+                                        {item.odometer ? `${item.odometer} miles` : "Odometer not set"}
+                                        {item.vin ? ` • VIN ${item.vin}` : ""}
+                                    </div>
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        <button onClick={() => { setVehicle(normalizeVehicle(item)); setScreen("hub") }} style={G.btn()}>LOAD VEHICLE</button>
+                                        <button onClick={() => { setVehicle(normalizeVehicle(item)); setUseVin(false); setEditingVehicleKey(item.key); setScreen("selector") }} style={G.ghost}>EDIT</button>
+                                        <button onClick={() => removeVehicleFromGarage(item.key)} style={{ ...G.ghost, color: "#a55", borderColor: "#3a2020" }}>REMOVE</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        )
+    }
+
     // ─── MAINTENANCE ──────────────────────────────────────────────────
     if (screen === "maintenance") {
         const odometer = parseInt(vehicle.odometer) || 0
@@ -454,7 +699,9 @@ export default function MechanIqs() {
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>MECHANIQS</span>
+                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                            <span style={G.logo}>MECHANIQS</span>
+                        </button>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ Maintenance</span>
                     </div>
                     <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
@@ -495,7 +742,9 @@ export default function MechanIqs() {
                 <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>MECHANIQS</span>
+                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                            <span style={G.logo}>MECHANIQS</span>
+                        </button>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ Parts</span>
                     </div>
                     <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
@@ -573,7 +822,9 @@ export default function MechanIqs() {
                 {/* Topbar */}
                 <div style={G.topbar}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={G.logo}>MECHANIQS</span>
+                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                            <span style={G.logo}>MECHANIQS</span>
+                        </button>
                         <span style={{ color: "#444", fontSize: "12px" }}>/ {selectedPart.name}</span>
                     </div>
                     <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
