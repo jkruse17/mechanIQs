@@ -25,6 +25,36 @@ const parsePrice = (value) => {
   return Number.isFinite(n) ? n : null
 }
 
+const normalizePartQuery = (value) => {
+  const raw = String(value || '').trim()
+  if (!raw) return 'Wiper Blade'
+
+  const cleaned = raw
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const partAliases = {
+    'cabin air filter': 'Cabin Air Filter',
+    'engine air filter': 'Engine Air Filter',
+    'spark plugs': 'Spark Plug',
+    'spark plug': 'Spark Plug',
+    'wiper blades': 'Wiper Blade',
+    'wiper blade': 'Wiper Blade',
+    'rear brake pads': 'Rear Brake Pad',
+    'rear brake pad': 'Rear Brake Pad',
+    'battery replacement': 'Car Battery',
+    'battery': 'Car Battery',
+    'front brake pads': 'Front Brake Pad',
+    'front brake pad': 'Front Brake Pad',
+  }
+
+  if (partAliases[cleaned]) return partAliases[cleaned]
+  return cleaned.split(' ').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+}
+
 const normalizePart = (item, index) => {
   const name = item.partName || item.name || item.title || item.description || 'Unknown Part'
   const cat = item.category || item.partCategory || item.section || 'Other'
@@ -79,7 +109,7 @@ const rockAutoProxyPlugin = (env) => {
             return
           }
 
-          const normalizedPart = partQuery || 'wiper blade'
+          const normalizedPart = normalizePartQuery(partQuery)
           const catalogQuery = [make, model, year, normalizedPart].filter(Boolean).join(' ')
           const actorInput = {
             year,

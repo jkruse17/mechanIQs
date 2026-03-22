@@ -1,4 +1,52 @@
+import { useEffect, useMemo, useState } from "react"
 import { FONT_IMPORT_STYLE } from "../constants/appData"
+
+const YOUTUBE_VIDEOS_BY_REPAIR = {
+    "front brake pads": ["6RQ9UabOIPg", "Wc8R5xwq5bY"],
+    "rear brake pads": [],
+    "engine air filter": [],
+    "oil & filter change": ["O1hF25Cowv8", "aD6f8kP9v2Q"],
+    "cabin air filter": [],
+    "spark plugs (4)": [],
+    "wiper blades": [],
+    "battery replacement": [],
+}
+
+const SEARCH_QUERY_BY_REPAIR = {
+    "cabin air filter": "cabin air filter replacement",
+    "engine air filter": "engine air filter replacement",
+    "spark plugs (4)": "spark plug replacement",
+    "wiper blades": "wiper blade replacement",
+    "rear brake pads": "rear brake pad replacement",
+    "battery replacement": "car battery replacement",
+}
+
+const getVideoContext = (partName, vehicle) => {
+    if (!partName) return { sources: [], searchUrl: "" }
+
+    const normalized = partName.toLowerCase().trim()
+    const basePhrase = SEARCH_QUERY_BY_REPAIR[normalized] || `${partName} diy repair tutorial`
+    const vehiclePhrase = [vehicle?.year, vehicle?.make, vehicle?.model, vehicle?.trim].filter(Boolean).join(" ").toLowerCase()
+    const searchPhrase = vehiclePhrase ? `${basePhrase} ${vehiclePhrase}` : basePhrase
+    const query = encodeURIComponent(searchPhrase)
+    const searchUrl = `https://www.youtube.com/results?search_query=${query}`
+    const curatedVideoIds = YOUTUBE_VIDEOS_BY_REPAIR[normalized] || []
+
+    const curatedSources = curatedVideoIds.map(videoId => ({
+        label: `Curated ${videoId}`,
+        url: `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1`,
+    }))
+
+    const searchSource = {
+        label: "YouTube Search",
+        url: `https://www.youtube-nocookie.com/embed?listType=search&list=${query}`,
+    }
+
+    return {
+        sources: [searchSource, ...curatedSources],
+        searchUrl,
+    }
+}
 
 export default function RepairPage({
     G,
@@ -21,6 +69,20 @@ export default function RepairPage({
     const cur = guide[step]
     const allDone = done.length === guide.length
     const quickPrompts = ["What torque spec?", "Any gotchas here?", "Can I skip this?", "What could go wrong?"]
+    const { sources: videoSources, searchUrl: videoSearchUrl } = useMemo(
+        () => getVideoContext(selectedPart?.name, vehicle),
+        [selectedPart?.name, vehicle?.year, vehicle?.make, vehicle?.model, vehicle?.trim]
+    )
+    const [videoIndex, setVideoIndex] = useState(0)
+    const [embedEnabled, setEmbedEnabled] = useState(false)
+
+    useEffect(() => {
+        setVideoIndex(0)
+        setEmbedEnabled(false)
+    }, [selectedPart?.name])
+
+    const currentVideoSource = videoSources[videoIndex] || null
+    const videoEmbedUrl = currentVideoSource?.url || ""
 
     return (
         <div style={{ ...G.app, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
@@ -54,6 +116,59 @@ export default function RepairPage({
                             STEP {step + 1} OF {guide.length} — {done.includes(step) ? <span style={{ color: "#4a9" }}>DONE</span> : "IN PROGRESS"}
                         </div>
                         <h2 style={{ fontSize: "22px", fontWeight: "700", marginBottom: "14px", lineHeight: "1.2" }}>{cur.title}</h2>
+
+                        {videoEmbedUrl && (
+                            <div style={{ marginBottom: "18px", border: "1px solid #1e1e1e", borderRadius: "3px", overflow: "hidden", background: "#090909", width: "60%" }}>
+                                <div style={{ padding: "8px 10px", fontSize: "10px", color: "#e8890c", letterSpacing: "0.1em", borderBottom: "1px solid #1e1e1e" }}>
+                                    VIDEO WALKTHROUGH
+                                </div>
+                                {embedEnabled ? (
+                                    <div style={{ position: "relative", width: "100%", paddingTop: "56.25%" }}>
+                                        <iframe
+                                            src={videoEmbedUrl}
+                                            title={`${selectedPart.name} tutorial video`}
+                                            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
+                                            loading="lazy"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                            referrerPolicy="strict-origin-when-cross-origin"
+                                            allowFullScreen
+                                        />
+                                    </div>
+                                ) : (
+                                    <div style={{ padding: "14px 12px", fontSize: "12px", color: "#777", lineHeight: "1.6", borderBottom: "1px solid #1e1e1e" }}>
+                                        Embedded YouTube playback may be blocked by browser policies or extensions. Use OPEN ON YOUTUBE for the most reliable playback, or click LOAD EMBED HERE to try in-page playback.
+                                    </div>
+                                )}
+                                <div style={{ padding: "8px 10px", borderTop: "1px solid #1e1e1e", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: "11px", color: "#666" }}>Source: {currentVideoSource?.label || "Unknown"}</span>
+                                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                        <button
+                                            onClick={() => setEmbedEnabled(x => !x)}
+                                            style={{ fontSize: "11px", color: "#e8890c", background: "#111", border: "1px solid #2a2a2a", padding: "6px 8px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit" }}
+                                        >
+                                            {embedEnabled ? "HIDE EMBED" : "LOAD EMBED HERE"}
+                                        </button>
+                                        {videoSources.length > 1 && (
+                                            <button
+                                                onClick={() => setVideoIndex((videoIndex + 1) % videoSources.length)}
+                                                style={{ fontSize: "11px", color: "#e8890c", background: "#111", border: "1px solid #2a2a2a", padding: "6px 8px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit" }}
+                                            >
+                                                TRY ANOTHER VIDEO
+                                            </button>
+                                        )}
+                                        <a
+                                            href={videoSearchUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style={{ fontSize: "11px", color: "#e8890c", textDecoration: "none", border: "1px solid #2a2a2a", padding: "6px 8px", borderRadius: "3px" }}
+                                        >
+                                            OPEN ON YOUTUBE
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <p style={{ color: "#aaa", lineHeight: "1.75", fontSize: "13px", marginBottom: "18px" }}>{cur.detail}</p>
 
                         {cur.gotcha && (
