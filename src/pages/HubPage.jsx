@@ -7,6 +7,7 @@ export default function HubPage({ G, goHome, vehicle, garage, setScreen, selecte
         { icon: "＋", label: "Add Vehicle", sub: "Load by VIN or manual selection", action: () => setScreen("selector"), live: true },
         { icon: "▣", label: "Garage", sub: `${garage.length} saved vehicle${garage.length === 1 ? "" : "s"}`, action: () => setScreen("garage"), live: true },
         { icon: "⬡", label: "Parts Catalog", sub: "OEM vs aftermarket with fitment", action: () => setScreen("parts"), live: hasVehicle },
+        { icon: "◈", label: "AI Symptom Diagnosis", sub: hasVehicle ? "Describe it - get ranked causes" : "Load a vehicle to unlock diagnosis", action: () => setScreen("diagnosis"), live: hasVehicle },
         { icon: "▸", label: "Tutorial", sub: hasTutorial ? `Resume ${selectedPart.name}` : "Pick a part first to start tutorial", action: () => setScreen("repair"), live: hasTutorial, badge: hasTutorial ? null : "LOCKED" },
         { icon: "◈", label: "AI Symptom Diagnosis", sub: "Describe it — get ranked causes", action: null, live: false },
         { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: () => setScreen("maintenance"), live: hasVehicle },
