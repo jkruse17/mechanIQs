@@ -47,10 +47,11 @@ export default function RecallPage({ vehicle, onBack }) {
             <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
             <div style={G.topbar}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span style={G.logo}>CARFIXR</span>
+                    <button onClick={onBack} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Dashboard</button>
+                    <span style={G.logo}>MECHANIQS</span>
                     <span style={{ color: "#444", fontSize: "12px" }}>/ Recalls</span>
                 </div>
-                <button onClick={onBack} style={G.ghost}>← HUB</button>
+                <span style={{ fontSize: "11px", color: "#555", letterSpacing: "0.08em" }}>ACTIVE RECALLS</span>
             </div>
             <div style={{ maxWidth: "760px", margin: "0 auto", padding: "36px 20px" }}>
                 <div style={{ marginBottom: "32px" }}>

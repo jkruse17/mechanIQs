@@ -21,9 +21,12 @@ export default function SelectorPage({
         <div style={G.app}>
             <style>{FONT_IMPORT_STYLE}</style>
             <div style={G.topbar}>
-                <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
-                    <span style={G.logo}>MECHANIQS</span>
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <button onClick={goHome} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Dashboard</button>
+                    <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                        <span style={G.logo}>MECHANIQS</span>
+                    </button>
+                </div>
                 <span style={{ fontSize: "11px", color: "#444", letterSpacing: "0.1em" }}>HACKATHON DEMO · 2025</span>
             </div>
             <div style={{ maxWidth: "520px", margin: "0 auto", padding: "48px 20px" }}>
