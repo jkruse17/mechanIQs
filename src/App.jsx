@@ -443,6 +443,7 @@ export default function MechanIqs() {
             <PartsPage
                 G={G}
                 goHome={goHome}
+                setScreen={setScreen}
                 vehicle={vehicle}
                 partsLoading={partsLoading}
                 partsError={partsError}
