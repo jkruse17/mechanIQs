@@ -97,6 +97,9 @@ export default function MechanIqs() {
     const [fetchingVehicles, setFetchingVehicles] = useState(false)
     const [vehicleError, setVehicleError] = useState("")
     const [useVin, setUseVin] = useState(false)
+    const [liveParts, setLiveParts] = useState([])
+    const [partsLoading, setPartsLoading] = useState(false)
+    const [partsError, setPartsError] = useState("")
     const chatEl = useRef(null)
 
     useEffect(() => {
@@ -153,6 +156,35 @@ export default function MechanIqs() {
 
         loadModels()
     }, [vehicle.year, vehicle.make])
+
+    const fetchLiveParts = async (partQuery = "") => {
+        if (!vehicle.year || !vehicle.make || !vehicle.model) return []
+
+        setPartsLoading(true)
+        setPartsError("")
+        try {
+            const qs = new URLSearchParams({
+                year: vehicle.year,
+                make: vehicle.make,
+                model: vehicle.model,
+                trim: vehicle.trim || "",
+                partQuery,
+            })
+            const res = await fetch(`/api/rockauto?${qs.toString()}`)
+            const data = await res.json()
+            if (!res.ok) throw new Error(data?.error || "Failed to fetch RockAuto parts")
+            const parts = Array.isArray(data.parts) ? data.parts : []
+            setLiveParts(parts)
+            return parts
+        } catch (err) {
+            console.error("RockAuto fetch failed", err)
+            setLiveParts([])
+            setPartsError(err?.message || "Could not load RockAuto parts")
+            return []
+        } finally {
+            setPartsLoading(false)
+        }
+    }
 
     const decodeVIN = async () => {
         if (!vehicle.vin || vehicle.vin.length !== 17) {
@@ -213,7 +245,8 @@ export default function MechanIqs() {
         setLoading(false)
     }
 
-    const startRepair = (part) => {
+    const startRepair = async (part) => {
+        await fetchLiveParts(part.name)
         setSelectedPart(part)
         setStep(0)
         setDone([])
@@ -229,8 +262,9 @@ export default function MechanIqs() {
         if (step < GUIDE.length - 1) setStep(s => s + 1)
     }
 
-    const categories = ["All", ...new Set(PARTS.map(p => p.cat))]
-    const visibleParts = catFilter === "All" ? PARTS : PARTS.filter(p => p.cat === catFilter)
+    const catalogParts = liveParts.length ? liveParts : PARTS
+    const categories = ["All", ...new Set(catalogParts.map(p => p.cat))]
+    const visibleParts = catFilter === "All" ? catalogParts : catalogParts.filter(p => p.cat === catFilter)
 
     const G = {
         app: { minHeight: "100vh", background: "#0b0b0b", color: "#ede9e1", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", fontSize: "14px" },
@@ -268,7 +302,10 @@ export default function MechanIqs() {
 
                     {/* Quick demo tile */}
                     <div
-                        onClick={() => { setVehicle({ year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000" }); setScreen("maintenance") }}
+                        onClick={() => {
+                            setVehicle(x => ({ ...x, year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000", vin: "" }))
+                            setScreen("maintenance")
+                        }}
                         style={{ border: "1px solid #e8890c", borderRadius: "4px", padding: "14px 18px", marginBottom: "28px", cursor: "pointer", background: "#0f0a00" }}
                     >
                         <div style={{ fontSize: "10px", color: "#e8890c", letterSpacing: "0.14em", marginBottom: "6px" }}>⚡  QUICK START — DEMO VEHICLE</div>
@@ -309,7 +346,7 @@ export default function MechanIqs() {
                                         disabled={key !== "year" && !vehicle.year || key === "model" && !vehicle.make}
                                         onChange={e => {
                                             const v = e.target.value
-                                            if (key === "year") setVehicle({ year: v, make: "", model: "", trim: "" })
+                                            if (key === "year") setVehicle(x => ({ ...x, year: v, make: "", model: "", trim: "" }))
                                             else if (key === "make") setVehicle(x => ({ ...x, make: v, model: "", trim: "" }))
                                             else setVehicle(x => ({ ...x, model: v, trim: "" }))
                                         }}
@@ -467,6 +504,12 @@ export default function MechanIqs() {
                     <div style={{ marginBottom: "20px" }}>
                         <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "4px" }}>{vehicle.year} {vehicle.make} {vehicle.model}</div>
                         <h2 style={{ fontSize: "20px", fontWeight: "700" }}>COMPATIBLE PARTS</h2>
+                        {partsLoading && (
+                            <p style={{ color: "#888", fontSize: "12px", marginTop: "10px" }}>Loading selected part options from RockAuto...</p>
+                        )}
+                        {partsError && (
+                            <p style={{ color: "#e04444", fontSize: "12px", marginTop: "10px" }}>{partsError}. Showing fallback catalog.</p>
+                        )}
                     </div>
 
                     {/* Category filters */}
@@ -502,7 +545,9 @@ export default function MechanIqs() {
                                 </div>
                                 <div style={{ display: "flex", justifyContent: "flex-end" }}>
                                     {p.hasGuide ? (
-                                        <button onClick={() => startRepair(p)} style={G.btn()}>START REPAIR</button>
+                                        <button disabled={partsLoading} onClick={() => startRepair(p)} style={{ ...G.btn(partsLoading ? "#1e1e1e" : "#e8890c"), color: partsLoading ? "#444" : "#0b0b0b", cursor: partsLoading ? "not-allowed" : "pointer" }}>
+                                            {partsLoading ? "LOADING..." : "START REPAIR"}
+                                        </button>
                                     ) : (
                                         <button disabled style={{ ...G.btn("#1e1e1e"), color: "#444", cursor: "not-allowed" }}>GUIDE SOON</button>
                                     )}
@@ -666,23 +711,4 @@ export default function MechanIqs() {
     }
 
     return null
-}
-
-const decodeVin = async (vin) => {
-    const res = await fetch(`/api/nhtsa?type=decodeVin&vin=${vin}`)
-    const data = await res.json()
-
-    // Flatten the key-value array into a usable object
-    const decoded = {}
-    data.Results.forEach(item => {
-        decoded[item.Variable] = item.Value
-    })
-
-    // Auto-populate vehicle state
-    setVehicle({
-        year: decoded['Model Year'] || '',
-        make: decoded['Make'] || '',
-        model: decoded['Model'] || '',
-        trim: decoded['Trim'] || '',
-    })
 }
