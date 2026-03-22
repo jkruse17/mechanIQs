@@ -116,6 +116,75 @@ const DIFF_COLOR = ["", "#4a9", "#e8a020", "#e04444"]
 const DEFAULT_VEHICLE = { year: "", make: "", model: "", trim: "", odometer: "", vin: "" }
 const GARAGE_STORAGE_KEY = "mechaniqs.garage.v1"
 const LAST_VEHICLE_STORAGE_KEY = "mechaniqs.lastVehicle.v1"
+const DIAGNOSIS_QUICK_SYMPTOMS = [
+    "Grinding noise while braking at low speed",
+    "Engine cranks but does not start when warm",
+    "Steering wheel shakes above 60 mph",
+    "Sweet smell and temperature gauge rising",
+    "Clicking noise when turning at full lock",
+]
+
+const cleanJsonBlock = (text = "") => {
+    const trimmed = String(text).trim()
+    if (!trimmed) return ""
+    const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
+    return fencedMatch ? fencedMatch[1].trim() : trimmed
+}
+
+const parseDiagnosisResponse = (raw = "") => {
+    const cleaned = cleanJsonBlock(raw)
+    let parsed = null
+
+    try {
+        parsed = JSON.parse(cleaned)
+    } catch {
+        parsed = null
+    }
+
+    if (!parsed || typeof parsed !== "object") {
+        return {
+            urgency: "medium",
+            summary: cleaned || "No diagnosis was returned. Please try again with more detail.",
+            redFlags: [],
+            likelyCauses: [],
+            nextSteps: [],
+            recommendedParts: [],
+            disclaimer: "AI output could not be structured. Treat this as a starting point only.",
+            raw,
+        }
+    }
+
+    const urgency = ["low", "medium", "high", "critical"].includes(String(parsed.urgency || "").toLowerCase())
+        ? String(parsed.urgency).toLowerCase()
+        : "medium"
+
+    const normalizeArray = (value) => Array.isArray(value)
+        ? value.map(v => String(v || "").trim()).filter(Boolean)
+        : []
+
+    const likelyCauses = Array.isArray(parsed.likelyCauses)
+        ? parsed.likelyCauses
+            .map((item, idx) => ({
+                rank: Number(item?.rank) || idx + 1,
+                cause: String(item?.cause || item?.name || "Possible cause").trim(),
+                confidence: Math.min(99, Math.max(1, Number(item?.confidence) || 50)),
+                why: String(item?.why || item?.reason || "").trim(),
+                checks: normalizeArray(item?.checks),
+            }))
+            .sort((a, b) => a.rank - b.rank)
+        : []
+
+    return {
+        urgency,
+        summary: String(parsed.summary || "No summary returned.").trim(),
+        redFlags: normalizeArray(parsed.redFlags),
+        likelyCauses,
+        nextSteps: normalizeArray(parsed.nextSteps),
+        recommendedParts: normalizeArray(parsed.recommendedParts),
+        disclaimer: String(parsed.disclaimer || "This is not a substitute for an in-person inspection.").trim(),
+        raw,
+    }
+}
 
 const normalizeVehicle = (v = {}) => ({
     year: String(v.year || "").trim(),
@@ -173,6 +242,11 @@ export default function MechanIqs() {
     const [partsError, setPartsError] = useState("")
     const [garage, setGarage] = useState([])
     const [editingVehicleKey, setEditingVehicleKey] = useState("")
+    const [diagnosisInput, setDiagnosisInput] = useState("")
+    const [diagnosisContext, setDiagnosisContext] = useState("")
+    const [diagnosisLoading, setDiagnosisLoading] = useState(false)
+    const [diagnosisError, setDiagnosisError] = useState("")
+    const [diagnosisResult, setDiagnosisResult] = useState(null)
     const chatEl = useRef(null)
 
     const addVehicleToGarage = (v) => {
@@ -420,6 +494,46 @@ export default function MechanIqs() {
         setLoading(false)
     }
 
+    const runSymptomDiagnosis = async () => {
+        if (!diagnosisInput.trim() || diagnosisLoading) return
+
+        setDiagnosisLoading(true)
+        setDiagnosisError("")
+        setDiagnosisResult(null)
+
+        const vehicleLabel = `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}`.trim()
+
+        try {
+            const res = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
+                    "anthropic-version": "2023-06-01"
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 1200,
+                    system: "You are MECHANIQS AI symptom triage. Always return strict JSON and no markdown. Prioritize safety and practical driveway checks. If symptoms indicate dangerous operation, elevate urgency and include immediate stop-driving guidance.",
+                    messages: [{
+                        role: "user",
+                        content: `Vehicle: ${vehicleLabel}\nOdometer: ${vehicle.odometer || "unknown"} miles\nSymptom report: ${diagnosisInput.trim()}\nAdditional context: ${diagnosisContext.trim() || "none"}\n\nReturn ONLY valid JSON with this schema:\n{\n  "urgency": "low|medium|high|critical",\n  "summary": "one short paragraph",\n  "redFlags": ["string"],\n  "likelyCauses": [\n    { "rank": 1, "cause": "string", "confidence": 0-100, "why": "string", "checks": ["string"] }\n  ],\n  "nextSteps": ["string"],\n  "recommendedParts": ["string"],\n  "disclaimer": "string"\n}\nKeep likelyCauses to 3 items and checks to quick, safe, non-invasive tests.`
+                    }],
+                }),
+            })
+
+            const data = await res.json()
+            if (!res.ok) throw new Error(data?.error?.message || data?.error || "Diagnosis request failed")
+            const text = data?.content?.[0]?.text || ""
+            setDiagnosisResult(parseDiagnosisResponse(text))
+        } catch (err) {
+            console.error("Symptom diagnosis failed", err)
+            setDiagnosisError(err?.message || "Connection error. Check your API key and network.")
+        } finally {
+            setDiagnosisLoading(false)
+        }
+    }
+
     const startRepair = async (part) => {
         await fetchLiveParts(part.name)
         setSelectedPart(part)
@@ -475,10 +589,6 @@ export default function MechanIqs() {
 
                     {/* Quick demo tile */}
                     <div
-                        onClick={() => {
-                            setVehicle(x => ({ ...x, year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000", vin: "" }))
-                            setScreen("maintenance")
-                        }}
                         onClick={() => loadVehicle({ year: "2026", make: "Honda", model: "Civic", trim: "Sport Hybrid", odometer: "45000" }, "hub")}
                         style={{ border: "1px solid #e8890c", borderRadius: "4px", padding: "14px 18px", marginBottom: "28px", cursor: "pointer", background: "#0f0a00" }}
                     >
@@ -588,7 +698,7 @@ export default function MechanIqs() {
             { icon: "＋", label: "Add Vehicle", sub: "Load by VIN or manual selection", action: () => setScreen("selector"), live: true },
             { icon: "▣", label: "Garage", sub: `${garage.length} saved vehicle${garage.length === 1 ? "" : "s"}`, action: () => setScreen("garage"), live: true },
             { icon: "⬡", label: "Parts Catalog", sub: "OEM vs aftermarket with fitment", action: () => setScreen("parts"), live: hasVehicle },
-            { icon: "◈", label: "AI Symptom Diagnosis", sub: "Describe it — get ranked causes", action: null, live: false },
+            { icon: "◈", label: "AI Symptom Diagnosis", sub: "Describe it — get ranked causes", action: () => setScreen("diagnosis"), live: hasVehicle },
             { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: () => setScreen("maintenance"), live: hasVehicle },
             { icon: "⚑", label: "OBD-II Code Lookup", sub: "Paste a fault code for plain English", action: null, live: false },
         ]
@@ -628,6 +738,159 @@ export default function MechanIqs() {
                             </div>
                         ))}
                     </div>
+                </div>
+            </div>
+        )
+    }
+
+    // ─── AI SYMPTOM DIAGNOSIS ───────────────────────────────────────
+    if (screen === "diagnosis") {
+        const urgencyColor = {
+            low: "#4a9",
+            medium: "#d6a542",
+            high: "#e8890c",
+            critical: "#e04444",
+        }
+
+        const hasResult = Boolean(diagnosisResult)
+
+        return (
+            <div style={G.app}>
+                <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
+                <div style={G.topbar}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <button onClick={() => setScreen("hub")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Dashboard</button>
+                        <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                            <span style={G.logo}>MECHANIQS</span>
+                        </button>
+                    </div>
+                    <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
+                </div>
+
+                <div style={{ maxWidth: "920px", margin: "0 auto", padding: "30px 20px 44px" }}>
+                    <div style={{ marginBottom: "18px" }}>
+                        <div style={{ fontSize: "10px", color: "#e8890c", letterSpacing: "0.12em", marginBottom: "6px" }}>AI SYMPTOM DIAGNOSIS</div>
+                        <h2 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "8px" }}>Describe what your car is doing</h2>
+                        <p style={{ color: "#666", fontSize: "13px", lineHeight: "1.7" }}>Get likely causes ranked by probability, quick checks you can do safely, and parts you may need before opening the hood.</p>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "10px", marginBottom: "14px" }}>
+                        <label style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em" }}>SYMPTOMS</label>
+                        <textarea
+                            value={diagnosisInput}
+                            onChange={e => setDiagnosisInput(e.target.value)}
+                            placeholder="Example: Loud squeal only during first 5 minutes of driving; slight pull to the right when braking..."
+                            style={{ minHeight: "110px", background: "#111", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "10px 12px", borderRadius: "4px", fontFamily: "inherit", fontSize: "12px", lineHeight: "1.6", resize: "vertical", outline: "none" }}
+                        />
+                    </div>
+
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "16px" }}>
+                        {DIAGNOSIS_QUICK_SYMPTOMS.map(symptom => (
+                            <button
+                                key={symptom}
+                                onClick={() => setDiagnosisInput(symptom)}
+                                style={{ background: "#0f0f0f", border: "1px solid #2a2a2a", color: "#777", padding: "6px 10px", borderRadius: "20px", fontFamily: "inherit", fontSize: "11px", cursor: "pointer" }}
+                            >
+                                {symptom}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px", alignItems: "end", marginBottom: "18px" }}>
+                        <div>
+                            <label style={{ display: "block", fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>OPTIONAL CONTEXT</label>
+                            <input
+                                value={diagnosisContext}
+                                onChange={e => setDiagnosisContext(e.target.value)}
+                                placeholder="Recent work, weather, warning lights, when issue started"
+                                style={{ width: "100%", background: "#111", border: "1px solid #2a2a2a", color: "#ede9e1", padding: "10px 12px", borderRadius: "4px", fontFamily: "inherit", fontSize: "12px", outline: "none" }}
+                            />
+                        </div>
+                        <button
+                            onClick={runSymptomDiagnosis}
+                            disabled={!diagnosisInput.trim() || diagnosisLoading}
+                            style={{ ...G.btn(diagnosisInput.trim() && !diagnosisLoading ? "#e8890c" : "#1e1e1e"), color: diagnosisInput.trim() && !diagnosisLoading ? "#0b0b0b" : "#444", cursor: diagnosisInput.trim() && !diagnosisLoading ? "pointer" : "not-allowed", padding: "11px 18px" }}
+                        >
+                            {diagnosisLoading ? "ANALYZING..." : "RUN DIAGNOSIS"}
+                        </button>
+                    </div>
+
+                    {diagnosisError && (
+                        <div style={{ border: "1px solid #552222", background: "#170d0d", borderRadius: "4px", padding: "12px", color: "#ee8f8f", fontSize: "12px", marginBottom: "16px" }}>
+                            {diagnosisError}
+                        </div>
+                    )}
+
+                    {!hasResult && !diagnosisLoading && (
+                        <div style={{ border: "1px solid #1f1f1f", borderRadius: "4px", background: "#0e0e0e", padding: "16px", color: "#666", fontSize: "12px", lineHeight: "1.7" }}>
+                            Tip: include when the symptom happens (cold start, under braking, uphill), noises/smells, and any warning lights to improve ranking accuracy.
+                        </div>
+                    )}
+
+                    {hasResult && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            <div style={{ border: "1px solid #252525", borderRadius: "4px", background: "#0e0e0e", padding: "16px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", gap: "10px", flexWrap: "wrap" }}>
+                                    <div style={{ fontSize: "16px", fontWeight: "700" }}>Triage Summary</div>
+                                    <div style={{ border: `1px solid ${urgencyColor[diagnosisResult.urgency] || "#666"}`, color: urgencyColor[diagnosisResult.urgency] || "#666", padding: "4px 8px", borderRadius: "3px", fontSize: "11px", letterSpacing: "0.08em" }}>
+                                        {String(diagnosisResult.urgency || "medium").toUpperCase()} URGENCY
+                                    </div>
+                                </div>
+                                <p style={{ color: "#c7c2b8", fontSize: "13px", lineHeight: "1.7" }}>{diagnosisResult.summary}</p>
+                            </div>
+
+                            {diagnosisResult.redFlags?.length > 0 && (
+                                <div style={{ border: "1px solid #5a2a00", borderRadius: "4px", background: "#120a00", padding: "14px" }}>
+                                    <div style={{ color: "#e8a040", fontSize: "10px", letterSpacing: "0.12em", marginBottom: "8px" }}>STOP-DRIVING RED FLAGS</div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                        {diagnosisResult.redFlags.map((flag, idx) => (
+                                            <div key={`${flag}-${idx}`} style={{ color: "#d9b17b", fontSize: "12px", lineHeight: "1.6" }}>• {flag}</div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "10px" }}>
+                                {diagnosisResult.likelyCauses?.map(cause => (
+                                    <div key={`${cause.rank}-${cause.cause}`} style={{ border: "1px solid #222", borderRadius: "4px", background: "#0d0d0d", padding: "14px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", gap: "8px", flexWrap: "wrap" }}>
+                                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#ede9e1" }}>#{cause.rank} {cause.cause}</div>
+                                            <div style={{ color: "#e8890c", fontSize: "11px", fontWeight: "700" }}>{cause.confidence}% match</div>
+                                        </div>
+                                        {cause.why && <p style={{ color: "#888", fontSize: "12px", lineHeight: "1.6", marginBottom: "8px" }}>{cause.why}</p>}
+                                        {cause.checks?.length > 0 && (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                {cause.checks.map((check, idx) => (
+                                                    <div key={`${check}-${idx}`} style={{ color: "#bbb", fontSize: "12px" }}>▸ {check}</div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{ border: "1px solid #1f1f1f", borderRadius: "4px", background: "#0e0e0e", padding: "14px" }}>
+                                <div style={{ fontSize: "10px", color: "#e8890c", letterSpacing: "0.12em", marginBottom: "8px" }}>NEXT STEPS</div>
+                                {diagnosisResult.nextSteps?.length > 0 ? diagnosisResult.nextSteps.map((stepText, idx) => (
+                                    <div key={`${stepText}-${idx}`} style={{ color: "#bdb8af", fontSize: "12px", lineHeight: "1.6", marginBottom: "4px" }}>• {stepText}</div>
+                                )) : <div style={{ color: "#666", fontSize: "12px" }}>No next steps returned.</div>}
+                            </div>
+
+                            <div style={{ border: "1px solid #1f1f1f", borderRadius: "4px", background: "#0e0e0e", padding: "14px" }}>
+                                <div style={{ fontSize: "10px", color: "#e8890c", letterSpacing: "0.12em", marginBottom: "8px" }}>POSSIBLE PARTS TO PRICE</div>
+                                {diagnosisResult.recommendedParts?.length > 0 ? diagnosisResult.recommendedParts.map((partText, idx) => (
+                                    <div key={`${partText}-${idx}`} style={{ color: "#bdb8af", fontSize: "12px", lineHeight: "1.6", marginBottom: "4px" }}>• {partText}</div>
+                                )) : <div style={{ color: "#666", fontSize: "12px" }}>No parts suggested yet.</div>}
+                                <div style={{ marginTop: "10px" }}>
+                                    <button onClick={() => setScreen("parts")} style={G.btn()}>OPEN PARTS CATALOG →</button>
+                                </div>
+                            </div>
+
+                            <div style={{ color: "#666", fontSize: "11px", lineHeight: "1.6" }}>
+                                {diagnosisResult.disclaimer}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         )
