@@ -169,6 +169,7 @@ export default function MechanIqs() {
     const [vehicleError, setVehicleError] = useState("")
     const [useVin, setUseVin] = useState(false)
     const [garage, setGarage] = useState([])
+    const [editingVehicleKey, setEditingVehicleKey] = useState("")
     const chatEl = useRef(null)
 
     const addVehicleToGarage = (v) => {
@@ -188,10 +189,42 @@ export default function MechanIqs() {
 
     const loadVehicle = (v, nextScreen = "hub") => {
         const normalized = normalizeVehicle(v)
+        const nextKey = getVehicleKey(normalized)
+
+        if (editingVehicleKey && editingVehicleKey !== nextKey) {
+            setGarage(prev => {
+                const next = prev.filter(item => item.key !== editingVehicleKey)
+                writeStorage(GARAGE_STORAGE_KEY, next)
+                return next
+            })
+        }
+
         setVehicle(normalized)
         writeStorage(LAST_VEHICLE_STORAGE_KEY, normalized)
         addVehicleToGarage(normalized)
+        setEditingVehicleKey("")
         setScreen(nextScreen)
+    }
+
+    const removeVehicleFromGarage = (key) => {
+        setGarage(prev => {
+            const next = prev.filter(item => item.key !== key)
+            writeStorage(GARAGE_STORAGE_KEY, next)
+            return next
+        })
+
+        if (getVehicleKey(vehicle) === key) {
+            setVehicle(DEFAULT_VEHICLE)
+            try {
+                localStorage.removeItem(LAST_VEHICLE_STORAGE_KEY)
+            } catch (err) {
+                console.error("Failed to clear last vehicle from storage", err)
+            }
+        }
+
+        if (editingVehicleKey === key) {
+            setEditingVehicleKey("")
+        }
     }
 
     const goHome = () => {
@@ -206,6 +239,7 @@ export default function MechanIqs() {
         setModelsBySelection([])
         setVehicleError("")
         setUseVin(false)
+        setEditingVehicleKey("")
     }
 
     useEffect(() => {
@@ -401,7 +435,7 @@ export default function MechanIqs() {
                 <div style={{ maxWidth: "520px", margin: "0 auto", padding: "48px 20px" }}>
                     <div style={{ marginBottom: "36px" }}>
                         <div style={{ fontSize: "11px", color: "#e8890c", letterSpacing: "0.14em", marginBottom: "10px" }}>VEHICLE-SPECIFIC CAR REPAIR</div>
-                        <h1 style={{ fontSize: "30px", fontWeight: "700", lineHeight: "1.2", marginBottom: "10px" }}>What are you<br />working on today?</h1>
+                        <h1 style={{ fontSize: "30px", fontWeight: "700", lineHeight: "1.2", marginBottom: "10px" }}>{editingVehicleKey ? "Edit your vehicle" : "What are you"}<br />{editingVehicleKey ? "and save changes" : "working on today?"}</h1>
                         <p style={{ color: "#666", fontSize: "13px", lineHeight: "1.6" }}>Select your vehicle to get guided repairs, part pricing, and an AI assistant that knows your exact car.</p>
                     </div>
 
@@ -583,10 +617,13 @@ export default function MechanIqs() {
                         <p style={{ color: "#666", fontSize: "13px", lineHeight: "1.6" }}>Vehicles loaded through VIN, manual selection, or demo are saved locally on this device.</p>
                     </div>
 
+                    <div style={{ marginBottom: "16px", display: "flex", justifyContent: "flex-start" }}>
+                        <button onClick={() => { setEditingVehicleKey(""); setScreen("selector") }} style={G.btn()}>ADD VEHICLE →</button>
+                    </div>
+
                     {garage.length === 0 ? (
                         <div style={{ border: "1px solid #1e1e1e", borderRadius: "4px", background: "#0e0e0e", padding: "22px" }}>
                             <div style={{ fontSize: "14px", marginBottom: "8px" }}>No saved vehicles yet.</div>
-                            <button onClick={() => setScreen("selector")} style={G.btn()}>ADD YOUR FIRST VEHICLE →</button>
                         </div>
                     ) : (
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
@@ -599,6 +636,8 @@ export default function MechanIqs() {
                                     </div>
                                     <div style={{ display: "flex", gap: "8px" }}>
                                         <button onClick={() => { setVehicle(normalizeVehicle(item)); setScreen("hub") }} style={G.btn()}>LOAD VEHICLE</button>
+                                        <button onClick={() => { setVehicle(normalizeVehicle(item)); setUseVin(false); setEditingVehicleKey(item.key); setScreen("selector") }} style={G.ghost}>EDIT</button>
+                                        <button onClick={() => removeVehicleFromGarage(item.key)} style={{ ...G.ghost, color: "#a55", borderColor: "#3a2020" }}>REMOVE</button>
                                     </div>
                                 </div>
                             ))}
