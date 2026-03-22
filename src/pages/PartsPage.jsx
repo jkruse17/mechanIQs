@@ -50,6 +50,16 @@ export default function PartsPage({ G, goHome, vehicle, partsLoading, partsError
                             <div>
                                 <div style={{ fontWeight: "700", fontSize: "13px", marginBottom: "3px" }}>{p.name}</div>
                                 <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.08em" }}>{p.cat.toUpperCase()}</div>
+                                {p.url && (
+                                    <a
+                                        href={p.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        style={{ display: "inline-block", marginTop: "4px", fontSize: "10px", color: "#e8890c", textDecoration: "none", letterSpacing: "0.05em" }}
+                                    >
+                                        VIEW PART LISTING ↗
+                                    </a>
+                                )}
                             </div>
                             <div style={{ textAlign: "center", fontSize: "11px", color: "#888", fontWeight: "700" }}>{p.cat || "PART"}</div>
                             <div style={{ textAlign: "center", fontSize: "12px", color: "#666" }}>ROCKAUTO</div>
@@ -57,7 +67,21 @@ export default function PartsPage({ G, goHome, vehicle, partsLoading, partsError
                                 <div style={{ fontSize: "13px", fontWeight: "700" }}>${p.am}</div>
                             </div>
                             <div style={{ textAlign: "right", fontSize: "12px", color: "#888" }}>OEM ${p.oem}</div>
-                            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                            <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "flex-end", gap: "6px" }}>
+                                {p.url ? (
+                                    <a
+                                        href={p.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        style={{ ...G.btn("#1e1e1e"), color: "#e8890c", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                                    >
+                                        OPEN PART ↗
+                                    </a>
+                                ) : (
+                                    <button disabled style={{ ...G.btn("#1e1e1e"), color: "#444", cursor: "not-allowed" }}>
+                                        NO LINK
+                                    </button>
+                                )}
                                 <button disabled={partsLoading} onClick={() => startRepair(p, { skipFetch: true, guidePart: selectedPart || p })} style={{ ...G.btn(partsLoading ? "#1e1e1e" : "#e8890c"), color: partsLoading ? "#444" : "#0b0b0b", cursor: partsLoading ? "not-allowed" : "pointer" }}>
                                     {partsLoading ? "LOADING..." : "START REPAIR"}
                                 </button>
