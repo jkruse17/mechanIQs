@@ -415,7 +415,7 @@ export default function MechanIqs() {
     }
 
     const completeStep = () => {
-        setDone(d => [...d, step])
+        setDone(d => (d.includes(step) ? d : [...d, step]))
         if (step < activeGuide.length - 1) setStep(s => s + 1)
     }
 

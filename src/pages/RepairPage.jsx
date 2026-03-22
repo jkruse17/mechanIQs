@@ -67,7 +67,7 @@ export default function RepairPage({
     chatEl,
 }) {
     const cur = guide[step]
-    const allDone = done.length === guide.length
+    const allDone = guide.every((_, i) => done.includes(i))
     const quickPrompts = ["What torque spec?", "Any gotchas here?", "Can I skip this?", "What could go wrong?"]
     const { sources: videoSources, searchUrl: videoSearchUrl } = useMemo(
         () => getVideoContext(selectedPart?.name, vehicle),
