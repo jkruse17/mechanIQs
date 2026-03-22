@@ -1,4 +1,4 @@
-export default function Sidebar({ screen, setScreen, vehicle, selectedPart, G }) {
+export default function Sidebar({ screen, setScreen, vehicle, selectedPart, G, auth = { enabled: false } }) {
     const hasVehicle = Boolean(vehicle.year && vehicle.make && vehicle.model)
     const hasPart = Boolean(selectedPart)
 
@@ -61,6 +61,60 @@ export default function Sidebar({ screen, setScreen, vehicle, selectedPart, G })
                     <span>{item.label}</span>
                 </button>
             ))}
+
+            {auth.enabled && (
+                <div style={{ marginTop: "8px", paddingTop: "10px", borderTop: "1px solid #1e1e1e", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {auth.isAuthenticated ? (
+                        <>
+                            <div style={{ fontSize: "10px", color: "#666", lineHeight: "1.4", wordBreak: "break-word" }}>
+                                {auth.user?.email || "Signed in"}
+                            </div>
+                            <button
+                                onClick={auth.onLogout}
+                                style={{
+                                    textAlign: "left",
+                                    background: "transparent",
+                                    border: "1px solid #2a2a2a",
+                                    color: "#ddd",
+                                    padding: "10px 12px",
+                                    borderRadius: "3px",
+                                    cursor: "pointer",
+                                    fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
+                                    fontSize: "12px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                }}
+                            >
+                                <span style={{ fontSize: "14px" }}>⇠</span>
+                                <span>Logout</span>
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={() => setScreen("hub")}
+                            style={{
+                                textAlign: "left",
+                                background: "#e8890c",
+                                border: "1px solid #e8890c",
+                                color: "#0b0b0b",
+                                padding: "10px 12px",
+                                borderRadius: "3px",
+                                cursor: "pointer",
+                                fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
+                                fontSize: "12px",
+                                fontWeight: "700",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                            }}
+                        >
+                            <span style={{ fontSize: "14px" }}>⇢</span>
+                            <span>Login</span>
+                        </button>
+                    )}
+                </div>
+            )}
         </div>
     )
 }
