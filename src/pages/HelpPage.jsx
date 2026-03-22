@@ -15,7 +15,7 @@ export default function HelpPage({ G, goHome, setScreen }) {
                 <div style={{ marginBottom: "32px" }}>
                     <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>SUPPORT</div>
                     <h2 style={{ fontSize: "26px", fontWeight: "700", marginBottom: "8px" }}>How can we help?</h2>
-                    <p style={{ color: "#666", fontSize: "13px", lineHeight: "1.6" }}>Get assistance with using MechanIQs or contact our support team.</p>
+                    <p style={{ color: "#666", fontSize: "13px", lineHeight: "1.6", marginBottom: "-15px" }}>Get assistance with using MechanIQs or contact our support team.</p>
                 </div>
 
                 <div style={{ display: "grid", gap: "20px" }}>
@@ -59,10 +59,6 @@ export default function HelpPage({ G, goHome, setScreen }) {
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div style={{ marginTop: "32px", textAlign: "center" }}>
-                    <button onClick={goHome} style={G.btn("#202020")}>← BACK TO DASHBOARD</button>
                 </div>
             </div>
         </div>
