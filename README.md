@@ -50,6 +50,10 @@ Whether you're a first-time DIY mechanic or an experienced enthusiast, mechanIQs
 
 ## Setup
 
+For Use Only use - https://mechaniqical.vercel.app/
+
+for Edit proceed below
+
 1. Install dependencies:
 ```bash
 npm install
