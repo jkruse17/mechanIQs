@@ -59,7 +59,7 @@ export default function PartsPage({ G, goHome, vehicle, partsLoading, partsError
                             </div>
                             <div style={{ textAlign: "right", fontSize: "12px", color: "#888" }}>OEM ${p.oem}</div>
                             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                                <button disabled={partsLoading} onClick={() => startRepair(p, { skipFetch: true })} style={{ ...G.btn(partsLoading ? "#1e1e1e" : "#e8890c"), color: partsLoading ? "#444" : "#0b0b0b", cursor: partsLoading ? "not-allowed" : "pointer" }}>
+                                <button disabled={partsLoading} onClick={() => startRepair(p, { skipFetch: true, guidePart: selectedPart || p })} style={{ ...G.btn(partsLoading ? "#1e1e1e" : "#e8890c"), color: partsLoading ? "#444" : "#0b0b0b", cursor: partsLoading ? "not-allowed" : "pointer" }}>
                                     {partsLoading ? "LOADING..." : "START REPAIR"}
                                 </button>
                             </div>

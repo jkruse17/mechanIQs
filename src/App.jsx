@@ -352,17 +352,18 @@ export default function MechanIqs() {
     }
 
     const startRepair = async (part, options = {}) => {
-        const { skipFetch = false } = options
+        const { skipFetch = false, guidePart = null } = options
+        const tutorialPart = guidePart || part
         if (!skipFetch) {
             await fetchLiveParts(part.name)
         }
-        setActiveGuide(buildGuideForPart(part, vehicle))
-        setSelectedPart(part)
+        setActiveGuide(buildGuideForPart(tutorialPart, vehicle))
+        setSelectedPart(tutorialPart)
         setStep(0)
         setDone([])
         setMsgs([{
             role: "assistant",
-            content: `Ready. I've got context on your ${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim} and the ${part.name} job. Ask me anything — torque specs, gotchas, whether something looks right, or if it's safe to skip a step. Let's get it done.`,
+            content: `Ready. I've got context on your ${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim} and the ${tutorialPart.name} job. Ask me anything — torque specs, gotchas, whether something looks right, or if it's safe to skip a step. Let's get it done.`,
         }])
         setScreen("repair")
     }

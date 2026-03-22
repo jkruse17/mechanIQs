@@ -87,13 +87,242 @@ const BATTERY_GUIDE = [
     },
 ]
 
+const FRONT_BRAKE_PADS_GUIDE = [
+    {
+        title: "Prep front brake service safely",
+        detail: "Gather pads, cleaner, lube, and torque tools before lifting the front axle.",
+        tools: ["Floor jack", "Jack stands", "Lug wrench", "14mm/17mm socket set", "Torque wrench"],
+        gotcha: "⚠ Chock rear wheels before lifting the front of the car.",
+    },
+    {
+        title: "Remove caliper and old front pads",
+        detail: "Lift front corner, remove wheel, unbolt caliper, then remove front pad set and hardware.",
+        tools: ["Socket set", "Bungee cord"],
+        gotcha: "⚠ Hang the caliper; do not let it pull on the brake hose.",
+    },
+    {
+        title: "Compress piston and install new pads",
+        detail: "Compress front caliper piston, lubricate contact points, and install new pads and clips.",
+        tools: ["C-clamp or piston tool", "Brake grease"],
+        gotcha: "⚠ Keep grease off pad friction surfaces and rotor face.",
+    },
+    {
+        title: "Torque and bed-in front brakes",
+        detail: "Reassemble, torque caliper and wheel hardware, pump pedal, then perform gentle brake bedding.",
+        tools: ["Torque wrench"],
+        gotcha: "⚠ Do not drive until pedal feel is firm.",
+    },
+]
+
+const REAR_BRAKE_PADS_GUIDE = [
+    {
+        title: "Set parking brake strategy first",
+        detail: "Confirm whether your rear setup needs parking brake released or service mode before disassembly.",
+        tools: ["Scan tool (if EPB)", "Wheel chocks", "Jack and stands"],
+        gotcha: "⚠ Electronic parking brake systems may be damaged if not placed in service mode.",
+    },
+    {
+        title: "Remove rear caliper and pads",
+        detail: "Remove rear wheel, unbolt caliper, and take out old rear pads and abutment hardware.",
+        tools: ["Socket set", "Bungee cord"],
+        gotcha: "⚠ Rear brake dust can contain irritants; avoid blowing it with compressed air.",
+    },
+    {
+        title: "Retract rear piston correctly",
+        detail: "Use the correct rear piston tool for your caliper type, then install new pads and clips.",
+        tools: ["Rear piston wind-back tool", "Brake grease"],
+        gotcha: "⚠ Some rear pistons must be rotated while retracting.",
+    },
+    {
+        title: "Re-enable parking brake and verify",
+        detail: "Reassemble, torque hardware, restore parking brake mode, then pump pedal and test at low speed.",
+        tools: ["Torque wrench"],
+        gotcha: "⚠ Confirm parking brake operation before regular driving.",
+    },
+]
+
+const ENGINE_AIR_FILTER_GUIDE = [
+    {
+        title: "Locate and open airbox",
+        detail: "Find the engine airbox and release clips or fasteners without forcing tabs.",
+        tools: ["Screwdriver (if required)", "Work light"],
+        gotcha: "⚠ Brittle clips can crack in cold weather.",
+    },
+    {
+        title: "Remove and inspect old filter",
+        detail: "Lift out old element and inspect for debris, oiling issues, or rodent nesting.",
+        tools: ["Shop towel"],
+        gotcha: "⚠ Do not let debris fall into the intake tract.",
+    },
+    {
+        title: "Install new engine air filter",
+        detail: "Seat the new filter fully in the channel and verify perimeter seal contact.",
+        tools: ["Replacement filter"],
+        gotcha: "⚠ A pinched seal can trigger MAF-related drivability issues.",
+    },
+    {
+        title: "Close housing and confirm fit",
+        detail: "Re-latch clips or screws evenly and verify no unmetered air gaps remain.",
+        tools: [],
+        gotcha: null,
+    },
+]
+
+const OIL_FILTER_CHANGE_GUIDE = [
+    {
+        title: "Warm engine and prepare work area",
+        detail: "Warm oil slightly, position drain pan, and safely support vehicle if clearance is limited.",
+        tools: ["Drain pan", "Jack stands", "Gloves", "New oil and filter"],
+        gotcha: "⚠ Hot oil can burn; keep engine warm, not fully hot.",
+    },
+    {
+        title: "Drain old oil fully",
+        detail: "Remove drain plug, allow complete drain, and inspect plug/washer condition.",
+        tools: ["Socket/box wrench", "New crush washer"],
+        gotcha: "⚠ Cross-threading the oil pan can cause expensive repairs.",
+    },
+    {
+        title: "Replace filter and refill",
+        detail: "Remove old filter, oil the new gasket, install hand-tight, reinstall plug, then refill to spec.",
+        tools: ["Oil filter wrench", "Funnel"],
+        gotcha: "⚠ Ensure old filter gasket is not stuck on the engine mating surface.",
+    },
+    {
+        title: "Run, inspect leaks, and reset interval",
+        detail: "Start engine, check for leaks, verify dipstick level, then reset maintenance reminder.",
+        tools: ["Clean rag"],
+        gotcha: "⚠ Recheck level after a short run and top up as needed.",
+    },
+]
+
+const CABIN_AIR_FILTER_GUIDE = [
+    {
+        title: "Access cabin filter door",
+        detail: "Open glove box or cowl panel area based on vehicle layout and expose filter housing.",
+        tools: ["Trim tool", "Screwdriver (if needed)"],
+        gotcha: "⚠ Do not force glove box dampers or side stops.",
+    },
+    {
+        title: "Remove old filter and clean housing",
+        detail: "Slide out filter, remove leaves/dust, and wipe housing before install.",
+        tools: ["Vacuum", "Shop towel"],
+        gotcha: "⚠ Debris can fall into blower fan if housing is overfilled.",
+    },
+    {
+        title: "Install new filter in airflow direction",
+        detail: "Insert new filter with airflow arrow aligned to housing marking.",
+        tools: ["Replacement cabin filter"],
+        gotcha: "⚠ Wrong airflow orientation reduces HVAC performance.",
+    },
+    {
+        title: "Reassemble trim and test blower",
+        detail: "Close filter door, reinstall trim, and run fan at all speeds to confirm no noise.",
+        tools: [],
+        gotcha: null,
+    },
+]
+
+const SPARK_PLUGS_GUIDE = [
+    {
+        title: "Remove ignition coil covers",
+        detail: "Remove engine cover if equipped, disconnect coil connectors, and unbolt coils.",
+        tools: ["Socket set", "Pick tool"],
+        gotcha: "⚠ Label coil positions if harness routing is tight.",
+    },
+    {
+        title: "Extract old spark plugs",
+        detail: "Use a spark plug socket and extension to remove plugs from all cylinders.",
+        tools: ["Spark plug socket", "Extension", "Ratchet"],
+        gotcha: "⚠ Remove plugs on a cool engine to reduce thread damage risk.",
+    },
+    {
+        title: "Gap-check and install new plugs",
+        detail: "Verify plug gap per spec (if applicable), thread by hand first, then torque to spec.",
+        tools: ["Feeler gauge", "Torque wrench"],
+        gotcha: "⚠ Cross-threaded aluminum heads are a major repair.",
+    },
+    {
+        title: "Reinstall coils and verify idle",
+        detail: "Reinstall coils/connectors, start engine, and confirm smooth idle with no misfire codes.",
+        tools: ["OBD scanner (optional)"],
+        gotcha: "⚠ Loose coil connectors can mimic bad plug symptoms.",
+    },
+]
+
+const WIPER_BLADES_GUIDE = [
+    {
+        title: "Protect windshield and raise arms",
+        detail: "Lift wiper arms carefully and place a towel on glass in case an arm snaps down.",
+        tools: ["Soft towel"],
+        gotcha: "⚠ A bare wiper arm can crack windshield glass.",
+    },
+    {
+        title: "Remove old blade assembly",
+        detail: "Press tab or release clip and slide blade off arm hook or pin mount.",
+        tools: [],
+        gotcha: "⚠ Confirm connector style before forcing removal.",
+    },
+    {
+        title: "Install new blades and lock tabs",
+        detail: "Attach new blade until it clicks securely and verify adapter fitment.",
+        tools: ["Replacement blades"],
+        gotcha: "⚠ Mismatched adapter causes blade release while driving.",
+    },
+    {
+        title: "Test wipe pattern",
+        detail: "Lower arms gently and test with washer fluid for full, streak-free contact.",
+        tools: ["Washer fluid"],
+        gotcha: null,
+    },
+]
+
+const BATTERY_REPLACEMENT_GUIDE = [
+    {
+        title: "Prepare battery replacement area",
+        detail: "Power off vehicle, gather memory saver if desired, and confirm replacement battery spec.",
+        tools: ["10mm wrench", "Safety glasses", "Gloves"],
+        gotcha: "⚠ Verify battery group size and terminal orientation before install.",
+    },
+    {
+        title: "Disconnect and remove old battery",
+        detail: "Remove negative terminal first, then positive, then hold-down bracket and battery.",
+        tools: ["Socket set", "Battery strap"],
+        gotcha: "⚠ Negative must come off first to reduce short risk.",
+    },
+    {
+        title: "Clean tray and terminals",
+        detail: "Neutralize corrosion and clean clamps for low-resistance electrical contact.",
+        tools: ["Terminal brush", "Baking soda solution"],
+        gotcha: "⚠ Keep corrosion residue off paint and belt-driven components.",
+    },
+    {
+        title: "Install new battery and confirm charging",
+        detail: "Install and secure battery, connect positive then negative, and verify charging voltage.",
+        tools: ["Multimeter"],
+        gotcha: "⚠ Loose terminals can cause intermittent no-start conditions.",
+    },
+]
+
+const CURATED_GUIDES_BY_PART_NAME = {
+    "front brake pads": FRONT_BRAKE_PADS_GUIDE,
+    "rear brake pads": REAR_BRAKE_PADS_GUIDE,
+    "engine air filter": ENGINE_AIR_FILTER_GUIDE,
+    "oil & filter change": OIL_FILTER_CHANGE_GUIDE,
+    "cabin air filter": CABIN_AIR_FILTER_GUIDE,
+    "spark plugs (4)": SPARK_PLUGS_GUIDE,
+    "wiper blades": WIPER_BLADES_GUIDE,
+    "battery replacement": BATTERY_REPLACEMENT_GUIDE,
+}
+
 const includesAny = (text, patterns) => patterns.some(p => text.includes(p))
 
 export const buildGuideForPart = (part, vehicle) => {
     const name = (part?.name || "").toLowerCase()
 
     let baseGuide = GUIDE
-    if (includesAny(name, ["brake pad", "brakes"])) {
+    if (CURATED_GUIDES_BY_PART_NAME[name]) {
+        baseGuide = CURATED_GUIDES_BY_PART_NAME[name]
+    } else if (includesAny(name, ["brake pad", "brakes"])) {
         baseGuide = BRAKE_PAD_GUIDE
     } else if (includesAny(name, ["air filter", "cabin filter", "filter"])) {
         baseGuide = FILTER_GUIDE
