@@ -30,7 +30,7 @@ export default function RepairsPage({
                 <div style={{ marginBottom: "20px" }}>
                     <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "4px" }}>{vehicle.year} {vehicle.make} {vehicle.model}</div>
                     <h2 style={{ fontSize: "20px", fontWeight: "700" }}>REPAIR CATALOG</h2>
-                    {selectedPart && (
+                    {selectedPart && !partsLoading && visibleParts.length > 0 && (
                         <div style={{ marginTop: "10px", padding: "10px 12px", border: "1px solid #2a2a2a", borderRadius: "3px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", background: "#111" }}>
                             <span style={{ color: "#888", fontSize: "12px" }}>Selected repair: <span style={{ color: "#ede9e1" }}>{selectedPart.name}</span></span>
                             <button onClick={goToTutorial} style={G.btn("#4a9")}>GO TO TUTORIAL →</button>
