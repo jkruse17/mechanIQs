@@ -456,6 +456,7 @@ export default function MechanIqs() {
                 selectedPart={selectedPart}
                 choosePartOnly={choosePartOnly}
                 goToTutorial={goToTutorial}
+                setScreen={setScreen}
             />
         )
     }
@@ -476,6 +477,7 @@ export default function MechanIqs() {
                     setDiagnosisMsgs([])
                     setDiagnosisInput("")
                 }}
+                setScreen={setScreen}
             />
         )
     }
