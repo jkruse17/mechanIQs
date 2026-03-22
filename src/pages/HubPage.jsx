@@ -19,17 +19,11 @@ export default function HubPage({ G, goHome, vehicle, garage, setScreen, selecte
         <div style={G.app}>
             <style>{FONT_IMPORT_STYLE_NO_ITALIC}</style>
             <div style={G.topbar}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
-                        <span style={G.logo}>MECHANIQS</span>
-                    </button>
-                    <span style={{ color: "#444", fontSize: "12px" }}>/ Dashboard</span>
+                <div style={{ fontSize: "24px", fontWeight: "700", color: "#f5f1ea" }}>Dashboard</div>
+                <div style={{ display: "flex", gap: "12px" }}>
+                    <button onClick={() => setScreen("help")} style={G.ghost}>HELP</button>
+                    <button onClick={() => setScreen("about")} style={G.ghost}>ABOUT</button>
                 </div>
-                {hasVehicle ? (
-                    <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
-                ) : (
-                    <span style={{ fontSize: "11px", color: "#555", letterSpacing: "0.08em" }}>NO VEHICLE LOADED</span>
-                )}
             </div>
             <div style={{ maxWidth: "960px", margin: "0 auto", padding: "36px 20px" }}>
                 <div style={{ marginBottom: "32px" }}>

@@ -35,6 +35,9 @@ import RepairsPage from "./pages/RepairsPage"
 import RepairPage from "./pages/RepairPage"
 import SymptomDiagnosisPage from "./pages/SymptomDiagnosisPage"
 import OBDLookupPage from "./pages/OBDLookupPage"
+import HelpPage from "./pages/HelpPage"
+import AboutPage from "./pages/AboutPage"
+import favicon from "./favicon.png"
 
 export default function MechanIqs({ auth = { enabled: false } }) {
     const [screen, setScreen] = useState("hub")
@@ -170,7 +173,7 @@ export default function MechanIqs({ auth = { enabled: false } }) {
     }
 
     useEffect(() => {
-        const validScreens = ["hub", "selector", "garage", "maintenance", "recalls", "repairs", "parts", "diagnosis", "obdLookup", "repair"]
+        const validScreens = ["hub", "selector", "garage", "maintenance", "recalls", "repairs", "parts", "diagnosis", "obdLookup", "repair", "help", "about"]
         const parsedGarage = readStorage(GARAGE_STORAGE_KEY, [])
         if (Array.isArray(parsedGarage)) setGarage(parsedGarage)
         else if (parsedGarage && typeof parsedGarage === "object") setGarage(Object.values(parsedGarage))
@@ -666,6 +669,14 @@ export default function MechanIqs({ auth = { enabled: false } }) {
             return <OBDLookupPage G={G} goHome={goHome} setScreen={setScreen} />
         }
 
+        if (screen === "help") {
+            return <HelpPage G={G} goHome={goHome} setScreen={setScreen} />
+        }
+
+        if (screen === "about") {
+            return <AboutPage G={G} goHome={goHome} setScreen={setScreen} />
+        }
+
         if (screen === "repair" && selectedPart) {
             return (
                 <RepairPage
@@ -705,6 +716,7 @@ export default function MechanIqs({ auth = { enabled: false } }) {
     if (auth.enabled && !auth.isAuthenticated) {
         return (
             <div style={{ display: "flex", minHeight: "100vh", height: "100vh", background: "#0b0b0b", overflow: "hidden" }}>
+                <img src={favicon} alt="MechanIQs Logo" style={{ position: "fixed", top: "10px", left: "10px", width: "60px", height: "60px", zIndex: 1000 }} />
                 <Sidebar
                     screen={screen}
                     setScreen={setScreen}
@@ -759,6 +771,8 @@ export default function MechanIqs({ auth = { enabled: false } }) {
 
     return (
         <div style={{ display: "flex", minHeight: "100vh", height: "100vh", background: "#0b0b0b", overflow: "hidden" }}>
+            <img src={favicon} alt="MechanIQs Logo" style={{ position: "fixed", top: "15px", left: "55px", width: "60px", height: "60px", zIndex: 1000 }} />
+            <div style={{ position: "fixed", top: "35px", left: "50%", transform: "translateX(-50%)", fontSize: "20px", fontWeight: "500", color: "#e8890c", zIndex: 1000, fontFamily: "'IBM Plex Mono', 'Courier New', monospace", letterSpacing: "0.1em" }}>MAINTENANCE MADE SIMPLE</div>
             <Sidebar screen={screen} setScreen={setScreen} vehicle={vehicle} selectedPart={selectedPart} G={G} auth={auth} />
             <div style={{ flex: 1, overflow: "auto" }}>
                 {content}

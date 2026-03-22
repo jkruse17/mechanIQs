@@ -89,14 +89,11 @@ export default function RepairPage({
             <style>{`${FONT_IMPORT_STYLE} ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }`}</style>
 
             <div style={G.topbar}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-
-                    <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
-                        <span style={G.logo}>MECHANIQS</span>
-                    </button>
-                    <span style={{ color: "#444", fontSize: "12px" }}>/ {selectedPart.name}</span>
+                <div style={{ fontSize: "24px", fontWeight: "700", color: "#f5f1ea" }}>{selectedPart.name}</div>
+                <div style={{ display: "flex", gap: "12px" }}>
+                    <button onClick={() => setScreen("help")} style={G.ghost}>HELP</button>
+                    <button onClick={() => setScreen("about")} style={G.ghost}>ABOUT</button>
                 </div>
-                <span style={{ fontSize: "11px", color: "#555" }}>{vehicle.year} {vehicle.make} {vehicle.model}</span>
             </div>
 
             <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
@@ -136,7 +133,7 @@ export default function RepairPage({
                                     </div>
                                 ) : (
                                     <div style={{ padding: "14px 12px", fontSize: "12px", color: "#777", lineHeight: "1.6", borderBottom: "1px solid #1e1e1e" }}>
-                                        Embedded YouTube playback may be blocked by browser policies or extensions. Use OPEN ON YOUTUBE for the most reliable playback, or click LOAD EMBED HERE to try in-page playback.
+                                        Use OPEN ON YOUTUBE for the most reliable playback, or click LOAD EMBED HERE to try in-page playback. Embedded YouTube playback may be blocked by browser policies or extensions.
                                     </div>
                                 )}
                                 <div style={{ padding: "8px 10px", borderTop: "1px solid #1e1e1e", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>

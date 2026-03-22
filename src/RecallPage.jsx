@@ -19,7 +19,8 @@ export default function RecallPage({ vehicle, setScreen }) {
                 setRecalls(data.results || [])
             } catch (err) {
                 console.error("Recall fetch failed", err)
-                setError("Failed to fetch recalls. Check network or try again.")
+                // Treat API errors as no recalls available
+                setRecalls([])
             } finally {
                 setLoading(false)
             }
@@ -46,9 +47,10 @@ export default function RecallPage({ vehicle, setScreen }) {
         <div style={G.app}>
             <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
             <div style={G.topbar}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span style={G.logo}>MECHANIQS</span>
-                    <span style={{ color: "#444", fontSize: "12px" }}>/ Recalls</span>
+                <div style={{ fontSize: "24px", fontWeight: "700", color: "#f5f1ea" }}>Recalls</div>
+                <div style={{ display: "flex", gap: "12px" }}>
+                    <button onClick={() => setScreen("help")} style={G.ghost}>HELP</button>
+                    <button onClick={() => setScreen("about")} style={G.ghost}>ABOUT</button>
                 </div>
             </div>
             <div style={{ maxWidth: "760px", margin: "0 auto", padding: "36px 20px" }}>
@@ -64,7 +66,7 @@ export default function RecallPage({ vehicle, setScreen }) {
                 {!loading && !error && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                         {recalls.length === 0 ? (
-                            <p>No active recalls found for this vehicle.</p>
+                            <p>There are no active recalls for this vehicle.</p>
                         ) : (
                             recalls.map(recall => (
                                 <div key={recall.NHTSACampaignNumber} style={{

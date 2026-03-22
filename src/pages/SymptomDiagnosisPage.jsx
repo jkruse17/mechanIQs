@@ -25,13 +25,12 @@ export default function SymptomDiagnosisPage({
             <style>{`${FONT_IMPORT_STYLE} ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }`}</style>
 
             <div style={G.topbar}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
-                        <span style={G.logo}>MECHANIQS</span>
-                    </button>
-                    <span style={{ color: "#444", fontSize: "12px" }}>/ AI Symptom Diagnosis</span>
+                <div style={{ fontSize: "24px", fontWeight: "700", color: "#f5f1ea" }}>AI Symptom Diagnosis</div>
+                <div style={{ display: "flex", gap: "12px" }}>
+                    <button onClick={clearDiagnosis} style={G.ghost}>CLEAR CHAT</button>
+                    <button onClick={() => setScreen("help")} style={G.ghost}>HELP</button>
+                    <button onClick={() => setScreen("about")} style={G.ghost}>ABOUT</button>
                 </div>
-                <button onClick={clearDiagnosis} style={G.ghost}>CLEAR CHAT</button>
             </div>
 
             <div style={{ maxWidth: "920px", width: "100%", margin: "0 auto", padding: "22px 20px", display: "flex", flexDirection: "column", gap: "10px", flex: 1, minHeight: 0 }}>

@@ -1,44 +1,7 @@
 "use client"
 
 import { useState } from "react"
-
-const OBD_SPREADSHEET = [
-    {
-        code: "P0420",
-        description: "Catalyst system efficiency is below threshold on bank 1.",
-        urgency: "Medium",
-        safeToDrive: true,
-        repairPath: "Inspect exhaust leaks, verify O2 sensor readings, then test catalytic converter performance.",
-    },
-    {
-        code: "P0301",
-        description: "Cylinder 1 misfire detected.",
-        urgency: "High",
-        safeToDrive: false,
-        repairPath: "Check spark plug and coil on cylinder 1, test injector pulse, then run compression test.",
-    },
-    {
-        code: "P0171",
-        description: "System too lean on bank 1.",
-        urgency: "Medium",
-        safeToDrive: true,
-        repairPath: "Look for intake vacuum leaks, inspect MAF sensor, and verify fuel pressure under load.",
-    },
-    {
-        code: "P0128",
-        description: "Coolant temperature is below thermostat regulating temperature.",
-        urgency: "Low",
-        safeToDrive: true,
-        repairPath: "Confirm engine warm-up time, inspect thermostat operation, and replace thermostat if stuck open.",
-    },
-    {
-        code: "P0455",
-        description: "EVAP system leak detected (gross leak).",
-        urgency: "Low",
-        safeToDrive: true,
-        repairPath: "Tighten or replace fuel cap, inspect EVAP hoses and purge/vent valves, then run smoke test.",
-    },
-]
+import { OBD_CODES, searchOBDCodes } from "../constants/obdCodes"
 
 export default function OBDIICodeLookup({ G }) {
     const [query, setQuery] = useState("")
@@ -55,14 +18,14 @@ export default function OBDIICodeLookup({ G }) {
             return
         }
 
-        const match = OBD_SPREADSHEET.find(item => item.code.toUpperCase() === normalizedQuery)
-        if (!match) {
+        const matches = searchOBDCodes(normalizedQuery)
+        if (matches.length === 0) {
             setResult(null)
             setError(`No match found for ${normalizedQuery}.`)
             return
         }
 
-        setResult(match)
+        setResult(matches[0])
         setError("")
     }
 

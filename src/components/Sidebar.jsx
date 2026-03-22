@@ -20,18 +20,32 @@ export default function Sidebar({ screen, setScreen, vehicle, selectedPart, G, a
             width: "180px",
             background: "#0e0e0e",
             borderRight: "1px solid #2a2a2a",
-            padding: "20px 12px",
+            padding: "130px 12px 20px",
             display: "flex",
             flexDirection: "column",
             gap: "16px",
             overflowY: "auto",
-            justifyContent: "center",
+            justifyContent: "flex-start",
             fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
             position: "sticky",
             top: 0,
             height: "100vh",
         }}>
             <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700&display=swap');`}</style>
+
+            {/* Logo section */}
+            <div style={{
+                position: "absolute",
+                top: "85px",
+                left: "40px",
+                fontSize: "18px",
+                fontWeight: "700",
+                color: "#e8890c",
+                fontFamily: "'IBM Plex Mono', 'Courier New', monospace"
+            }}>
+                MECHANIQS
+            </div>
+
             {navItems.map(item => (
                 <button
                     key={item.key}

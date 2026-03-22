@@ -15,19 +15,17 @@ export default function SelectorPage({
     decodeVIN,
     loadVehicle,
 }) {
-    const ready = vehicle.year && vehicle.make && vehicle.model && vehicle.trim && vehicle.odometer
+    const ready = vehicle.year && vehicle.make && vehicle.model && vehicle.odometer
 
     return (
         <div style={G.app}>
             <style>{FONT_IMPORT_STYLE}</style>
             <div style={G.topbar}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
-                        <span style={G.logo}>MECHANIQS</span>
-                    </button>
-                    <span style={{ color: "#444", fontSize: "12px" }}>/ Add Vehicle</span>
+                <div style={{ fontSize: "24px", fontWeight: "700", color: "#f5f1ea" }}>Add Vehicle</div>
+                <div style={{ display: "flex", gap: "12px" }}>
+                    <button onClick={() => setScreen("help")} style={G.ghost}>HELP</button>
+                    <button onClick={() => setScreen("about")} style={G.ghost}>ABOUT</button>
                 </div>
-                <span style={{ fontSize: "11px", color: "#444", letterSpacing: "0.1em" }}>HACKATHON DEMO · 2025</span>
             </div>
             <div style={{ maxWidth: "520px", margin: "0 auto", padding: "48px 20px" }}>
                 <div style={{ marginBottom: "36px" }}>
