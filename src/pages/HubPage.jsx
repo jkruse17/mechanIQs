@@ -1,0 +1,53 @@
+import { FONT_IMPORT_STYLE_NO_ITALIC } from "../constants/appData"
+
+export default function HubPage({ G, goHome, vehicle, garage, setScreen }) {
+    const hasVehicle = Boolean(vehicle.year && vehicle.make && vehicle.model)
+    const tiles = [
+        { icon: "＋", label: "Add Vehicle", sub: "Load by VIN or manual selection", action: () => setScreen("selector"), live: true },
+        { icon: "▣", label: "Garage", sub: `${garage.length} saved vehicle${garage.length === 1 ? "" : "s"}`, action: () => setScreen("garage"), live: true },
+        { icon: "⬡", label: "Parts Catalog", sub: "OEM vs aftermarket with fitment", action: () => setScreen("parts"), live: hasVehicle },
+        { icon: "◈", label: "AI Symptom Diagnosis", sub: "Describe it — get ranked causes", action: null, live: false },
+        { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: () => setScreen("maintenance"), live: hasVehicle },
+        { icon: "⚑", label: "OBD-II Code Lookup", sub: "Paste a fault code for plain English", action: null, live: false },
+    ]
+
+    return (
+        <div style={G.app}>
+            <style>{FONT_IMPORT_STYLE_NO_ITALIC}</style>
+            <div style={G.topbar}>
+                <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
+                    <span style={G.logo}>MECHANIQS</span>
+                </button>
+                {hasVehicle ? (
+                    <button onClick={() => setScreen("selector")} style={G.ghost}>CHANGE VEHICLE</button>
+                ) : (
+                    <span style={{ fontSize: "11px", color: "#555", letterSpacing: "0.08em" }}>NO VEHICLE LOADED</span>
+                )}
+            </div>
+            <div style={{ maxWidth: "640px", margin: "0 auto", padding: "36px 20px" }}>
+                <div style={{ marginBottom: "32px" }}>
+                    <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.12em", marginBottom: "6px" }}>{hasVehicle ? "VEHICLE LOADED" : "DASHBOARD"}</div>
+                    <h2 style={{ fontSize: "26px", fontWeight: "700" }}>
+                        {hasVehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}` : "Load a vehicle to unlock maintenance and parts"}
+                    </h2>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    {tiles.map(t => (
+                        <div
+                            key={t.label}
+                            onClick={t.live ? t.action : undefined}
+                            style={{ border: `1px solid ${t.live ? "#2a2a2a" : "#181818"}`, borderRadius: "4px", padding: "22px 18px", cursor: t.live ? "pointer" : "default", background: "#0e0e0e", position: "relative", transition: "border-color 0.15s" }}
+                            onMouseEnter={e => t.live && (e.currentTarget.style.borderColor = "#e8890c")}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = t.live ? "#2a2a2a" : "#181818"}
+                        >
+                            {!t.live && <span style={{ position: "absolute", top: "10px", right: "12px", fontSize: "9px", color: "#444", letterSpacing: "0.1em" }}>COMING SOON</span>}
+                            <div style={{ fontSize: "22px", marginBottom: "12px", color: t.live ? "#e8890c" : "#333" }}>{t.icon}</div>
+                            <div style={{ fontWeight: "700", fontSize: "13px", marginBottom: "5px", color: t.live ? "#ede9e1" : "#444" }}>{t.label}</div>
+                            <div style={{ color: t.live ? "#666" : "#333", fontSize: "12px", lineHeight: "1.5" }}>{t.sub}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    )
+}
