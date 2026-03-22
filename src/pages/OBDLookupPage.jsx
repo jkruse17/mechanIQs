@@ -17,7 +17,7 @@ export default function OBDLookupPage({ G, goHome, setScreen }) {
             </div>
 
             <div style={{ maxWidth: "920px", width: "100%", margin: "0 auto", padding: "22px 20px" }}>
-                <OBDIICodeLookup />
+                <OBDIICodeLookup G={G} />
             </div>
         </div>
     )
