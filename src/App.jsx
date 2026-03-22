@@ -26,6 +26,7 @@ import MaintenancePage from "./pages/MaintenancePage"
 import PartsPage from "./pages/PartsPage"
 import RepairPage from "./pages/RepairPage"
 import SymptomDiagnosisPage from "./pages/SymptomDiagnosisPage"
+import OBDLookupPage from "./pages/OBDLookupPage"
 
 export default function MechanIqs() {
     const [screen, setScreen] = useState("hub")
@@ -485,6 +486,10 @@ export default function MechanIqs() {
                 setScreen={setScreen}
             />
         )
+    }
+
+    if (screen === "obdLookup") {
+        return <OBDLookupPage G={G} goHome={goHome} setScreen={setScreen} />
     }
 
     if (screen === "repair" && selectedPart) {

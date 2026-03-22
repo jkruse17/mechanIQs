@@ -11,7 +11,7 @@ export default function HubPage({ G, goHome, vehicle, garage, setScreen, selecte
         { icon: "▸", label: "Tutorial", sub: hasTutorial ? `Resume ${selectedPart.name}` : "Pick a part first to start tutorial", action: () => setScreen("repair"), live: hasTutorial, badge: hasTutorial ? null : "LOCKED" },
         { icon: "◷", label: "Maintenance Schedule", sub: "Upcoming services by mileage", action: () => setScreen("maintenance"), live: hasVehicle },
         { icon: "⚠", label: "Recalls", sub: "Check active recalls for your vehicle", action: () => setScreen("recalls"), live: hasVehicle },
-        { icon: "⚑", label: "OBD-II Code Lookup", sub: "Paste a fault code for plain English", action: null, live: false },
+        { icon: "⚑", label: "OBD-II Code Lookup", sub: "Paste a fault code for plain English", action: () => setScreen("obdLookup"), live: true },
     ]
 
     return (
