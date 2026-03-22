@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import RecallPage from "./RecallPage.jsx"
 import {
     DEFAULT_VEHICLE,
     DIFF_COLOR,
@@ -436,6 +437,10 @@ export default function MechanIqs() {
 
     if (screen === "maintenance") {
         return <MaintenancePage G={G} goHome={goHome} vehicle={vehicle} maintenanceList={maintenanceList} setScreen={setScreen} />
+    }
+
+    if (screen === "recalls") {
+        return <RecallPage vehicle={vehicle} onBack={() => setScreen("hub")} />
     }
 
     if (screen === "parts") {
