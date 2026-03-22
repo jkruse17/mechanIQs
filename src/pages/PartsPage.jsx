@@ -1,11 +1,12 @@
 import { FONT_IMPORT_STYLE_NO_ITALIC } from "../constants/appData"
 
-export default function PartsPage({ G, goHome, vehicle, partsLoading, partsError, categories, catFilter, setCatFilter, visibleParts, startRepair, selectedPart, goToTutorial }) {
+export default function PartsPage({ G, goHome, vehicle, partsLoading, partsError, categories, catFilter, setCatFilter, visibleParts, diffColor, diffLabel, startRepair, selectedPart, choosePartOnly, goToTutorial, setScreen }) {
     return (
         <div style={G.app}>
             <style>{FONT_IMPORT_STYLE_NO_ITALIC}</style>
             <div style={G.topbar}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <button onClick={() => setScreen("hub")} style={{ ...G.ghost, padding: "8px 14px", fontSize: "13px" }}>← Dashboard</button>
                     <button onClick={goHome} style={G.logoBtn} aria-label="Go to home">
                         <span style={G.logo}>MECHANIQS</span>
                     </button>

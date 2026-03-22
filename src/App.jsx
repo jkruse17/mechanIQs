@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import RecallPage from "./RecallPage.jsx"
 import {
     DEFAULT_VEHICLE,
     DIFF_COLOR,
@@ -26,6 +27,7 @@ import PartsPage from "./pages/PartsPage"
 import RepairsPage from "./pages/RepairsPage"
 import RepairPage from "./pages/RepairPage"
 import SymptomDiagnosisPage from "./pages/SymptomDiagnosisPage"
+import OBDLookupPage from "./pages/OBDLookupPage"
 
 export default function MechanIqs() {
     const [screen, setScreen] = useState("hub")
@@ -450,6 +452,10 @@ export default function MechanIqs() {
         return <MaintenancePage G={G} goHome={goHome} vehicle={vehicle} maintenanceList={maintenanceList} setScreen={setScreen} />
     }
 
+    if (screen === "recalls") {
+        return <RecallPage vehicle={vehicle} onBack={() => setScreen("hub")} />
+    }
+
     if (screen === "repairs") {
         return (
             <RepairsPage
@@ -485,6 +491,7 @@ export default function MechanIqs() {
                 startRepair={startRepair}
                 selectedPart={selectedPart}
                 goToTutorial={goToTutorial}
+                setScreen={setScreen}
             />
         )
     }
@@ -505,8 +512,13 @@ export default function MechanIqs() {
                     setDiagnosisMsgs([])
                     setDiagnosisInput("")
                 }}
+                setScreen={setScreen}
             />
         )
+    }
+
+    if (screen === "obdLookup") {
+        return <OBDLookupPage G={G} goHome={goHome} setScreen={setScreen} />
     }
 
     if (screen === "repair" && selectedPart) {
