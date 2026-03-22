@@ -46,13 +46,13 @@ export default function RepairsPage({
                     ))}
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 80px 90px 120px", gap: "8px", padding: "6px 14px", fontSize: "10px", color: "#444", letterSpacing: "0.1em", borderBottom: "1px solid #1e1e1e", marginBottom: "8px" }}>
-                    <span>REPAIR</span><span style={{ textAlign: "center" }}>DIFF</span><span style={{ textAlign: "center" }}>TIME</span><span style={{ textAlign: "right" }}>FROM</span><span style={{ textAlign: "right" }}>CSAT</span><span />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 80px 120px", gap: "8px", padding: "6px 14px", fontSize: "10px", color: "#444", letterSpacing: "0.1em", borderBottom: "1px solid #1e1e1e", marginBottom: "8px" }}>
+                    <span>REPAIR</span><span style={{ textAlign: "center" }}>DIFF</span><span style={{ textAlign: "center" }}>TIME</span><span style={{ textAlign: "right" }}>FROM</span><span />
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     {visibleParts.map(p => (
-                        <div key={p.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 80px 90px 120px", gap: "8px", alignItems: "center", padding: "12px 14px", border: "1px solid #1e1e1e", borderRadius: "3px", background: "#0e0e0e" }}>
+                        <div key={p.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 80px 120px", gap: "8px", alignItems: "center", padding: "12px 14px", border: "1px solid #1e1e1e", borderRadius: "3px", background: "#0e0e0e" }}>
                             <div>
                                 <div style={{ fontWeight: "700", fontSize: "13px", marginBottom: "3px" }}>{p.name}</div>
                                 <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.08em" }}>{p.cat.toUpperCase()}</div>
@@ -64,10 +64,6 @@ export default function RepairsPage({
                             <div style={{ textAlign: "right" }}>
                                 <div style={{ fontSize: "13px", fontWeight: "700" }}>${p.am}</div>
                                 <div style={{ fontSize: "10px", color: "#444" }}>OEM ${p.oem}</div>
-                            </div>
-                            <div style={{ textAlign: "right" }}>
-                                <div style={{ fontSize: "13px", color: p.csat >= 90 ? "#4a9" : "#888", fontWeight: "700" }}>{p.csat}%</div>
-                                <div style={{ fontSize: "10px", color: "#444" }}>success</div>
                             </div>
                             <div style={{ display: "flex", justifyContent: "flex-end" }}>
                                 <button disabled={partsLoading} onClick={() => chooseRepairAndShowCompatible(p)} style={{ ...G.btn(partsLoading ? "#1e1e1e" : "#e8890c"), color: partsLoading ? "#444" : "#0b0b0b", cursor: partsLoading ? "not-allowed" : "pointer" }}>
