@@ -37,9 +37,9 @@ export default function RecallPage({ vehicle, setScreen }) {
 
     const G = {
         app: { minHeight: "100vh", background: "#0b0b0b", color: "#ede9e1", fontFamily: "'IBM Plex Mono', 'Courier New', monospace", fontSize: "14px" },
-        topbar: { height: "96px", borderBottom: "1px solid #222", padding: "0 40px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
+        topbar: { height: "96px", borderBottom: "1px solid #222", padding: "0 40px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, position: "sticky", top: 0, zIndex: 999, background: "#0b0b0b" },
         logo: { fontWeight: "700", fontSize: "32px", letterSpacing: "0.06em", color: "#e8890c" },
-        ghost: { background: "none", border: "1px solid #2a2a2a", color: "#666", padding: "10px 24px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit", fontSize: "24px", letterSpacing: "0.04em" },
+        ghost: { background: "none", border: "1px solid #2a2a2a", color: "#ffffff", padding: "10px 24px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit", fontSize: "24px", letterSpacing: "0.04em" },
         btn: (color = "#e8890c") => ({ background: color, border: "none", color: "#0b0b0b", padding: "10px 22px", borderRadius: "3px", cursor: "pointer", fontFamily: "inherit", fontWeight: "700", fontSize: "12px", letterSpacing: "0.06em" }),
     }
 

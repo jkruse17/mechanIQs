@@ -89,7 +89,7 @@ export default function RepairPage({
             <style>{`${FONT_IMPORT_STYLE} ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }`}</style>
 
             <div style={G.topbar}>
-                <div style={{ fontSize: "24px", fontWeight: "700", color: "#f5f1ea" }}>{selectedPart.name}</div>
+                <div style={{ fontSize: "24px", fontWeight: "700", color: "#f5f1ea" }}>Tutorial</div>
                 <div style={{ display: "flex", gap: "12px" }}>
                     <button onClick={() => setScreen("help")} style={G.ghost}>HELP</button>
                     <button onClick={() => setScreen("about")} style={G.ghost}>ABOUT</button>
