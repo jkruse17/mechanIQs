@@ -8,7 +8,13 @@ import {
     FALLBACK_MAKES,
     GARAGE_STORAGE_KEY,
     GUIDE,
+    LAST_DIAGNOSIS_CHAT_STORAGE_KEY,
     LAST_CATEGORY_FILTER_STORAGE_KEY,
+    LAST_DONE_STEPS_STORAGE_KEY,
+    LAST_LIVE_PARTS_STORAGE_KEY,
+    LAST_REPAIR_CHAT_STORAGE_KEY,
+    LAST_SCREEN_STORAGE_KEY,
+    LAST_TUTORIAL_STEP_STORAGE_KEY,
     LAST_VEHICLE_STORAGE_KEY,
     LAST_SELECTED_PART_STORAGE_KEY,
     MAINTENANCE,
@@ -30,7 +36,7 @@ import RepairPage from "./pages/RepairPage"
 import SymptomDiagnosisPage from "./pages/SymptomDiagnosisPage"
 import OBDLookupPage from "./pages/OBDLookupPage"
 
-export default function MechanIqs() {
+export default function MechanIqs({ auth = { enabled: false } }) {
     const [screen, setScreen] = useState("hub")
     const [vehicle, setVehicle] = useState(DEFAULT_VEHICLE)
     const [selectedPart, setSelectedPart] = useState(null)
@@ -55,8 +61,48 @@ export default function MechanIqs() {
     const [diagnosisMsgs, setDiagnosisMsgs] = useState([])
     const [diagnosisInput, setDiagnosisInput] = useState("")
     const [diagnosisLoading, setDiagnosisLoading] = useState(false)
+    const [authEmail, setAuthEmail] = useState("")
+    const [authPassword, setAuthPassword] = useState("")
+    const [authError, setAuthError] = useState("")
+    const [authBusy, setAuthBusy] = useState(false)
+    const [hasHydrated, setHasHydrated] = useState(false)
     const chatEl = useRef(null)
     const diagnosisChatEl = useRef(null)
+
+    const submitSignIn = async () => {
+        if (!authEmail.trim() || !authPassword) {
+            setAuthError("Email and password are required")
+            return
+        }
+
+        setAuthBusy(true)
+        setAuthError("")
+        try {
+            await auth.onSignIn?.(authEmail.trim(), authPassword)
+        } catch (err) {
+            setAuthError(err?.message || "Sign in failed")
+        } finally {
+            setAuthBusy(false)
+        }
+    }
+
+    const submitSignUp = async () => {
+        if (!authEmail.trim() || !authPassword) {
+            setAuthError("Email and password are required")
+            return
+        }
+
+        setAuthBusy(true)
+        setAuthError("")
+        try {
+            await auth.onSignUp?.(authEmail.trim(), authPassword)
+            setAuthError("Check your email for verification, then sign in.")
+        } catch (err) {
+            setAuthError(err?.message || "Sign up failed")
+        } finally {
+            setAuthBusy(false)
+        }
+    }
 
     const addVehicleToGarage = (v) => {
         const normalized = normalizeVehicle(v)
@@ -124,9 +170,15 @@ export default function MechanIqs() {
     }
 
     useEffect(() => {
+        const validScreens = ["hub", "selector", "garage", "maintenance", "recalls", "repairs", "parts", "diagnosis", "obdLookup", "repair"]
         const parsedGarage = readStorage(GARAGE_STORAGE_KEY, [])
         if (Array.isArray(parsedGarage)) setGarage(parsedGarage)
         else if (parsedGarage && typeof parsedGarage === "object") setGarage(Object.values(parsedGarage))
+
+        const parsedLastScreen = readStorage(LAST_SCREEN_STORAGE_KEY, "hub")
+        if (typeof parsedLastScreen === "string" && validScreens.includes(parsedLastScreen)) {
+            setScreen(parsedLastScreen)
+        }
 
         const parsedLastVehicle = readStorage(LAST_VEHICLE_STORAGE_KEY, null)
         if (parsedLastVehicle) {
@@ -143,17 +195,53 @@ export default function MechanIqs() {
         if (typeof parsedCategory === "string" && parsedCategory) {
             setCatFilter(parsedCategory)
         }
+
+        const parsedLiveParts = readStorage(LAST_LIVE_PARTS_STORAGE_KEY, [])
+        if (Array.isArray(parsedLiveParts)) {
+            setLiveParts(parsedLiveParts)
+        }
+
+        const parsedStep = readStorage(LAST_TUTORIAL_STEP_STORAGE_KEY, 0)
+        if (Number.isInteger(parsedStep) && parsedStep >= 0) {
+            setStep(parsedStep)
+        }
+
+        const parsedDone = readStorage(LAST_DONE_STEPS_STORAGE_KEY, [])
+        if (Array.isArray(parsedDone)) {
+            const sanitized = [...new Set(parsedDone.filter(Number.isInteger).filter(i => i >= 0))]
+            setDone(sanitized)
+        }
+
+        const parsedRepairChat = readStorage(LAST_REPAIR_CHAT_STORAGE_KEY, [])
+        if (Array.isArray(parsedRepairChat)) {
+            const sanitized = parsedRepairChat
+                .filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+                .slice(-40)
+            setMsgs(sanitized)
+        }
+
+        const parsedDiagnosisChat = readStorage(LAST_DIAGNOSIS_CHAT_STORAGE_KEY, [])
+        if (Array.isArray(parsedDiagnosisChat)) {
+            const sanitized = parsedDiagnosisChat
+                .filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+                .slice(-40)
+            setDiagnosisMsgs(sanitized)
+        }
+
+        setHasHydrated(true)
     }, [])
 
     useEffect(() => {
+        if (!hasHydrated) return
         writeStorage(GARAGE_STORAGE_KEY, garage)
-    }, [garage])
+    }, [garage, hasHydrated])
 
     useEffect(() => {
+        if (!hasHydrated) return
         if (vehicle.year && vehicle.make && vehicle.model) {
             writeStorage(LAST_VEHICLE_STORAGE_KEY, normalizeVehicle(vehicle))
         }
-    }, [vehicle])
+    }, [vehicle, hasHydrated])
 
     useEffect(() => {
         if (selectedPart) {
@@ -169,12 +257,44 @@ export default function MechanIqs() {
     }, [activeGuide.length])
 
     useEffect(() => {
+        if (!hasHydrated) return
         writeStorage(LAST_SELECTED_PART_STORAGE_KEY, selectedPart || null)
-    }, [selectedPart])
+    }, [selectedPart, hasHydrated])
 
     useEffect(() => {
+        if (!hasHydrated) return
         writeStorage(LAST_CATEGORY_FILTER_STORAGE_KEY, catFilter)
-    }, [catFilter])
+    }, [catFilter, hasHydrated])
+
+    useEffect(() => {
+        if (!hasHydrated) return
+        writeStorage(LAST_SCREEN_STORAGE_KEY, screen)
+    }, [screen, hasHydrated])
+
+    useEffect(() => {
+        if (!hasHydrated) return
+        writeStorage(LAST_LIVE_PARTS_STORAGE_KEY, liveParts)
+    }, [liveParts, hasHydrated])
+
+    useEffect(() => {
+        if (!hasHydrated) return
+        writeStorage(LAST_TUTORIAL_STEP_STORAGE_KEY, step)
+    }, [step, hasHydrated])
+
+    useEffect(() => {
+        if (!hasHydrated) return
+        writeStorage(LAST_DONE_STEPS_STORAGE_KEY, done)
+    }, [done, hasHydrated])
+
+    useEffect(() => {
+        if (!hasHydrated) return
+        writeStorage(LAST_REPAIR_CHAT_STORAGE_KEY, msgs.slice(-40))
+    }, [msgs, hasHydrated])
+
+    useEffect(() => {
+        if (!hasHydrated) return
+        writeStorage(LAST_DIAGNOSIS_CHAT_STORAGE_KEY, diagnosisMsgs.slice(-40))
+    }, [diagnosisMsgs, hasHydrated])
 
     useEffect(() => {
         if (chatEl.current) chatEl.current.scrollTop = chatEl.current.scrollHeight
@@ -572,12 +692,74 @@ export default function MechanIqs() {
         return null
     }
 
+    if (auth.enabled && auth.isLoading) {
+        return (
+            <div style={{ ...G.app, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+                <div style={{ border: "1px solid #2a2a2a", borderRadius: "4px", background: "#0e0e0e", padding: "20px", color: "#888", fontSize: "13px" }}>
+                    Checking authentication...
+                </div>
+            </div>
+        )
+    }
+
+    if (auth.enabled && !auth.isAuthenticated) {
+        return (
+            <div style={{ display: "flex", minHeight: "100vh", height: "100vh", background: "#0b0b0b", overflow: "hidden" }}>
+                <Sidebar
+                    screen={screen}
+                    setScreen={setScreen}
+                    vehicle={vehicle}
+                    selectedPart={selectedPart}
+                    G={G}
+                    auth={auth}
+                />
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", background: "radial-gradient(circle at 20% 20%, rgba(232,137,12,0.08), transparent 45%), #0b0b0b" }}>
+                    <div style={{ maxWidth: "560px", width: "100%", border: "1px solid #2a2a2a", borderRadius: "8px", background: "#101010", padding: "28px", boxShadow: "0 12px 40px rgba(0,0,0,0.45)" }}>
+                        <div style={{ fontSize: "10px", color: "#e8890c", letterSpacing: "0.14em", marginBottom: "10px", fontWeight: "700" }}>MECHANIQS ACCESS</div>
+                        <h2 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "10px", color: "#f5f1ea" }}>Sign In</h2>
+                        <p style={{ color: "#b8b3ab", fontSize: "13px", lineHeight: "1.6", marginBottom: "18px" }}>
+                            Sign in to access your garage, live parts lookup, tutorials, and diagnostics.
+                        </p>
+
+                        <div style={{ height: "1px", width: "100%", background: "linear-gradient(90deg, #e8890c 0%, #2a2a2a 60%, #2a2a2a 100%)", marginBottom: "16px" }} />
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            <input
+                                type="email"
+                                value={authEmail}
+                                onChange={(e) => setAuthEmail(e.target.value)}
+                                placeholder="Email"
+                                style={{ ...G.input, width: "100%", background: "#0b0b0b", border: "1px solid #2f2f2f", color: "#f2efe8" }}
+                            />
+                            <input
+                                type="password"
+                                value={authPassword}
+                                onChange={(e) => setAuthPassword(e.target.value)}
+                                placeholder="Password"
+                                style={{ ...G.input, width: "100%", background: "#0b0b0b", border: "1px solid #2f2f2f", color: "#f2efe8" }}
+                            />
+                            {authError ? <div style={{ color: "#ffb6b6", fontSize: "12px", background: "#2a1515", border: "1px solid #5a2828", padding: "8px 10px", borderRadius: "4px" }}>{authError}</div> : null}
+                            <div style={{ display: "flex", gap: "10px", marginTop: "2px" }}>
+                                <button onClick={submitSignIn} disabled={authBusy} style={{ ...G.btn("#e8890c"), opacity: authBusy ? 0.7 : 1, minWidth: "120px", fontWeight: "700" }}>
+                                    {authBusy ? "WORKING..." : "SIGN IN"}
+                                </button>
+                                <button onClick={submitSignUp} disabled={authBusy} style={{ ...G.btn("#202020"), color: "#f0ece5", border: "1px solid #3a3a3a", opacity: authBusy ? 0.7 : 1, minWidth: "120px" }}>
+                                    {authBusy ? "WORKING..." : "SIGN UP"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     const content = renderContent()
     if (!content) return null
 
     return (
         <div style={{ display: "flex", minHeight: "100vh", height: "100vh", background: "#0b0b0b", overflow: "hidden" }}>
-            <Sidebar screen={screen} setScreen={setScreen} vehicle={vehicle} selectedPart={selectedPart} G={G} />
+            <Sidebar screen={screen} setScreen={setScreen} vehicle={vehicle} selectedPart={selectedPart} G={G} auth={auth} />
             <div style={{ flex: 1, overflow: "auto" }}>
                 {content}
             </div>
