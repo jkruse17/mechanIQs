@@ -40,7 +40,7 @@ const OBD_SPREADSHEET = [
     },
 ]
 
-export default function OBDIICodeLookup() {
+export default function OBDIICodeLookup({ G }) {
     const [query, setQuery] = useState("")
     const [result, setResult] = useState(null)
     const [error, setError] = useState("")
@@ -67,63 +67,92 @@ export default function OBDIICodeLookup() {
     }
 
     return (
-        <section className="mx-auto w-full max-w-2xl rounded-xl border border-zinc-800 bg-zinc-950 p-6 text-zinc-100 shadow-2xl shadow-black/30">
-            <div className="mb-4 flex items-start gap-3">
-                <span className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-md bg-zinc-900 text-amber-400" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M6 3v18" />
-                        <path d="M7 4h9l-2 4 2 4H7" />
-                    </svg>
-                </span>
+        <section style={{ border: "1px solid #1e1e1e", borderRadius: "4px", background: "#090909", padding: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                <div
+                    aria-hidden="true"
+                    style={{
+                        width: "26px",
+                        height: "26px",
+                        borderRadius: "3px",
+                        border: "1px solid #2a2a2a",
+                        display: "grid",
+                        placeItems: "center",
+                        color: "#e8890c",
+                        fontSize: "13px",
+                        lineHeight: 1,
+                    }}
+                >
+                    ⚑
+                </div>
                 <div>
-                    <h2 className="text-xl font-semibold tracking-tight">OBD-II Code Lookup</h2>
-                    <p className="mt-1 text-sm text-zinc-400">Paste a fault code for plain English</p>
+                    <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "2px" }}>OBD-II Code Lookup</h2>
+                    <p style={{ fontSize: "12px", color: "#777" }}>Paste a fault code for plain English</p>
                 </div>
             </div>
 
-            <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row">
+            <form onSubmit={onSubmit} style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
                 <input
                     type="text"
                     value={query}
-                    onChange={event => setQuery(event.target.value)}
+                    onChange={event => setQuery(event.target.value.toUpperCase())}
                     placeholder="e.g., P0420"
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none ring-0 transition focus:border-amber-500"
+                    style={{
+                        flex: 1,
+                        minWidth: "220px",
+                        background: "#111",
+                        border: "1px solid #2a2a2a",
+                        color: "#ede9e1",
+                        padding: "10px 12px",
+                        borderRadius: "3px",
+                        fontFamily: "inherit",
+                        fontSize: "12px",
+                        outline: "none",
+                    }}
                 />
-                <button
-                    type="submit"
-                    className="rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-medium text-zinc-950 transition hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
-                >
-                    Search
+                <button type="submit" style={{ ...G.btn("#e8890c"), padding: "10px 14px" }}>
+                    SEARCH
                 </button>
             </form>
 
             {error && (
-                <p className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                <p style={{ border: "1px solid #4a1f1f", background: "#1a0d0d", color: "#d59d9d", borderRadius: "3px", padding: "9px 10px", fontSize: "12px" }}>
                     {error}
                 </p>
             )}
 
             {result && (
-                <article className="mt-4 rounded-lg border border-zinc-700 bg-zinc-900/70 p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                        <span className="rounded bg-zinc-800 px-2 py-1 text-xs font-semibold text-zinc-300">{result.code}</span>
-                        <span className={`rounded px-2 py-1 text-xs font-semibold ${result.urgency === "High" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"}`}>
-                            Urgency: {result.urgency}
+                <article style={{ border: "1px solid #2a2a2a", borderRadius: "4px", background: "#0e0e0e", padding: "12px", display: "grid", gap: "9px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <span style={{ background: "#161616", border: "1px solid #2a2a2a", padding: "4px 8px", borderRadius: "3px", fontSize: "11px", color: "#c8c4bc", letterSpacing: "0.04em" }}>
+                            CODE: {result.code}
+                        </span>
+                        <span
+                            style={{
+                                background: result.urgency === "High" ? "#2a1111" : "#2a210e",
+                                border: `1px solid ${result.urgency === "High" ? "#5d2424" : "#5a4516"}`,
+                                color: result.urgency === "High" ? "#ef9a9a" : "#f0cc70",
+                                padding: "4px 8px",
+                                borderRadius: "3px",
+                                fontSize: "11px",
+                                letterSpacing: "0.04em",
+                            }}
+                        >
+                            URGENCY: {result.urgency}
                         </span>
                     </div>
 
-                    <p className="text-sm leading-6 text-zinc-200">{result.description}</p>
+                    <p style={{ fontSize: "12px", color: "#c8c4bc", lineHeight: "1.6" }}>{result.description}</p>
 
-                    <div className="mt-3 grid gap-2 text-sm text-zinc-300">
-                        <p>
-                            <span className="font-medium text-zinc-100">Safe to drive:</span>{" "}
-                            {result.safeToDrive ? "Yes (short trips only until diagnosed)." : "No (risk of damage or stalling)."}
-                        </p>
-                        <p>
-                            <span className="font-medium text-zinc-100">Repair path:</span>{" "}
-                            {result.repairPath}
-                        </p>
-                    </div>
+                    <p style={{ fontSize: "12px", color: "#c8c4bc", lineHeight: "1.6" }}>
+                        <span style={{ color: "#ede9e1", fontWeight: "700" }}>Safe to drive:</span>{" "}
+                        {result.safeToDrive ? "Yes (short trips only until diagnosed)." : "No (risk of damage or stalling)."}
+                    </p>
+
+                    <p style={{ fontSize: "12px", color: "#c8c4bc", lineHeight: "1.6" }}>
+                        <span style={{ color: "#ede9e1", fontWeight: "700" }}>Repair path:</span>{" "}
+                        {result.repairPath}
+                    </p>
                 </article>
             )}
         </section>
