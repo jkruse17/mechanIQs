@@ -1,0 +1,181 @@
+================================================================================
+MECHANIQS - ONLINE RESOURCES & SOURCES
+================================================================================
+
+PROJECT OVERVIEW:
+mechanIQs is a vehicle-specific car repair platform that helps people maintain
+their own cars without intimidation or confusion. This file documents all
+external APIs, data sources, and AI resources used in the project.
+
+================================================================================
+DATA & VEHICLE SOURCES
+================================================================================
+
+1. NHTSA Vehicle Picklist API (VPIC)
+   Description: Official US government vehicle database containing comprehensive
+                specifications for vehicles by year, make, model, and trim.
+   Website: https://vpic.nhtsa.dot.gov/api/
+   Primary Endpoint: https://vpic.nhtsa.dot.gov/api/vehicles/
+   
+   Used For:
+   - Vehicle make/model/trim database lookup
+   - Year range filtering (1980-2026)
+   - Accurate vehicle specifications and classifications
+   
+   Documentation: https://vpic.nhtsa.dot.gov/api/Home
+   Free Tier: Yes (no API key required, rate limits apply)
+
+2. RockAuto - Parts Pricing & Catalog
+   Website: https://www.rockauto.com/
+   Description: Comprehensive OEM and aftermarket automotive parts retailer
+                with detailed part descriptions, pricing, and compatibility info.
+   
+   Used For:
+   - OEM (Original Equipment Manufacturer) parts pricing
+   - Aftermarket parts pricing and availability
+   - Part descriptions and compatibility information
+   - Parts guides and repair documentation
+   
+   Note: RockAuto parts are referenced in the applications parts catalog.
+         Integration details in PartsPage.jsx
+
+================================================================================
+AI & LARGE LANGUAGE MODEL RESOURCES
+================================================================================
+
+1. OpenRouter API
+   Website: https://openrouter.ai/
+   API Key Portal: https://openrouter.ai/keys
+   
+   Description: Unified API gateway for accessing multiple AI model providers
+                including Anthropic Claude, Google Gemini, Mistral, and others.
+   
+   Models Used:
+   - Claude 3.5 Sonnet (primary model for repair assistance & diagnostics)
+   - Claude 3 Opus (optional alternative for complex reasoning)
+   
+   Used For:
+   - AI Repair Assistant (step-aware guidance during repairs)
+   - AI Symptom Diagnosis (vehicle issue analysis & ranking)
+   - Vehicle-context-aware chat interactions
+   
+   Server-Side Integration:
+   - API requests proxied through Vite dev server at /api/ai-chat
+   - OPENROUTER_API_KEY stored server-side (never exposed to client)
+   - Environment variable: OPENROUTER_API_KEY
+   
+   Documentation: https://openrouter.ai/docs
+   Pricing: Pay-as-you-go model (first $5 free credit for new users)
+
+2. Anthropic Claude API
+   Website: https://www.anthropic.com/
+   Console: https://console.anthropic.com/
+   
+   Description: Direct access to Anthropic's Claude AI models. Claude is used
+                as the primary reasoning engine for repair guidance and diagnostics.
+   
+   Models Available:
+   - Claude 3.5 Sonnet (fastest for this use case)
+   - Claude 3 Opus (most capable, slower)
+   - Claude 3 Haiku (lighweight, summarization)
+   
+   Used For:
+   - Alternative direct integration path (currently using via OpenRouter)
+   - Potential future enhancement for multi-model fallback
+   - Fine-tuning capabilities for vehicle-specific knowledge
+   
+   Environment variable: ANTHROPIC_API_KEY
+   Documentation: https://docs.anthropic.com/
+   Pricing: Token-based pricing (input & output tokens)
+
+================================================================================
+FRONTEND FRAMEWORKS & LIBRARIES
+================================================================================
+
+1. React 18
+   Website: https://react.dev/
+   Package: react@^18.3.1
+   Description: JavaScript library for building user interfaces with component-
+                based architecture and hooks.
+
+2. Vite
+   Website: https://vitejs.dev/
+   Package: vite@^6.0.3
+   Description: Next-generation frontend build tool. Used as the development
+                server with JSON API proxy support for AI requests.
+   
+   Key Features Used:
+   - Hot module replacement (HMR) for development
+   - API proxy configuration (/api/* routes)
+   - Production build optimization
+
+3. React DOM
+   Package: react-dom@^18.3.1
+   Description: React package for working with the DOM
+
+4. @vitejs/plugin-react
+   Package: @vitejs/plugin-react@^4.3.4
+   Description: Official Vite plugin for React with JSX support
+
+================================================================================
+REFERENCE & INSPIRATION
+================================================================================
+
+1. Neil Postman - "Amusing Ourselves to Death"
+   Philosophy: "We live in a world that, for the most part, makes no sense to us."
+   
+   Project Philosophy:
+   mechanIQs aims to remove this "fog of war" between drivers and their vehicles,
+   making complex automotive systems understandable and accessible to everyone.
+
+================================================================================
+ENVIRONMENT CONFIGURATION
+================================================================================
+
+Required API Keys (create .env.local):
+
+1. OPENROUTER_API_KEY
+   - Get from: https://openrouter.ai/keys
+   - Required for: AI Repair Assistant, AI Symptom Diagnosis
+   - Access Level: All AI features
+
+2. ANTHROPIC_API_KEY (optional, for direct API access)
+   - Get from: https://console.anthropic.com/
+   - Current Setup: Not used (via OpenRouter instead)
+   - Future Use: Potential multi-model fallback support
+
+See .env.local.example for configuration template.
+
+================================================================================
+DEVELOPMENT SETUP
+================================================================================
+
+Installation:
+1. npm install
+2. cp .env.local.example .env.local  (then add API keys)
+3. npm run dev
+
+Development Server:
+- Frontend: http://localhost:5173 (React + Vite)
+- API Proxy: /api/ai-chat (server-side proxied to OpenRouter)
+
+================================================================================
+GITHUB REPOSITORY
+================================================================================
+
+Repository: https://github.com/jkruse17/mechanIQs
+License: ISC
+
+================================================================================
+NOTES
+================================================================================
+
+- All AI chat requests are proxied through the Vite dev server for security
+  (API keys never exposed to browser/client-side code)
+- Vehicle data is cached locally in browser storage for faster access
+- Parts data is currently demo data but integrated with RockAuto for scalability
+- The project uses industry-standard security practices with server-side proxying
+
+================================================================================
+Last Updated: March 2026
+================================================================================
